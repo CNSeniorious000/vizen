@@ -27,10 +27,7 @@ runtime.hmr?.register("content", (props) => {
   return h("article", { class: "md-content__inner md-typeset", dangerouslySetInnerHTML: { __html: p.html ?? "" } });
 });
 
-runtime.hmr?.register("footer", (props) => {
-  const p = props as { site_name?: string };
-  return h("footer", { class: "md-footer" }, h("div", { class: "md-footer__title" }, p.site_name ?? ""));
-});
+runtime.hmr?.register("footer", (props) => { const p = props as { site_name?: string }; return h("footer", { class: "md-footer" }, h("div", { class: "md-footer__title" }, p.site_name ?? "")); });
 
 runtime.hmr?.register("nav", (props) => {
   const p = props as { nav?: { title: string; url?: string; children?: unknown[] }[] };

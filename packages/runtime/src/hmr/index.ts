@@ -50,19 +50,30 @@ export function createHmrClient(): HmrClient {
   return {
     register(island, render) {
       registry.set(island, render);
-      // Initial mount: hydrate the SSR markup in place. Hydration attaches event
-      // handlers to the existing DOM WITHOUT re-creating nodes — this preserves the
-      // server-rendered HTML so client-side navigation can diff islands against the same
-      // SSR output the next page produces. (If we used render here, Preact would rebuild
-      // the DOM and the island's live markup would diverge from SSR, causing every
-      // navigation to falsely detect a change and swap.)
+      // If this island is already mounted (HMR re-registering after a source change),
+      // re-render it in place with the NEW renderer. We do NOT clear the host — Preact's
+      // render diffs the previous vnode tree against the new one and patches the DOM in
+      // place, preserving unchanged subtrees and their state. (Clearing first would break
+      // Preact's internal vnode cache and silently render nothing.)
+      let hotUpdated = false;
       for (const host of findHosts(island)) {
         const id = islandId(host);
-        if (mounted.has(id)) continue;
+        const prev = mounted.get(id);
+        if (prev) {
+          mounted.set(id, { host, render, props: prev.props });
+          preactRender(render(prev.props), host);
+          hotUpdated = true;
+          continue;
+        }
+        // Initial mount: hydrate the SSR markup in place. Hydration attaches event
+        // handlers to the existing DOM WITHOUT re-creating nodes — this preserves the
+        // server-rendered HTML so client-side navigation can diff islands against the same
+        // SSR output the next page produces.
         const props = readProps(host);
         mounted.set(id, { host, render, props });
         preactHydrate(render(props), host);
       }
+      void hotUpdated;
     },
 
     apply(update) {
@@ -90,6 +101,20 @@ export function createHmrClient(): HmrClient {
       }
     },
   };
+}
+
+// Module-level singleton. When main.ts is hot-reloaded, the module re-executes and calls
+// mount() again — without a singleton, a fresh client (empty `mounted` map) would be
+// created and the hot update would have nothing to re-render. The singleton preserves the
+// mounted-island registry across HMR cycles so register() can re-render in place.
+let singleton: HmrClient | null = null;
+export function getHmrClient(): HmrClient {
+  if (!singleton) singleton = createHmrClient();
+  return singleton;
+}
+/** Reset the singleton — tests use this to isolate between cases. */
+export function resetHmrClient(): void {
+  singleton = null;
 }
 
 /** Props are serialized into a `<script type="application/json" data-md-props>` child of
