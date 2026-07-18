@@ -13,7 +13,7 @@ async function patchFooter(text: string) {
   const src = await readFile(MAIN_TS, "utf8");
   // Replace the footer renderer (between the START/END markers) with one that emits a
   // fixed marker in .md-footer-meta__inner, so we can assert the hot update took effect.
-  const replacement = `runtime.hmr?.register("footer", () => h("footer", { class: "md-footer", "data-md-component": "footer" }, h("div", { class: "md-footer-meta md-typeset" }, h("div", { class: "md-footer-meta__inner md-grid" }, ${JSON.stringify(text)}))));`;
+  const replacement = `runtime.hmr?.register("footer", () => h("footer", { class: "md-footer" }, h("div", { class: "md-footer-meta md-typeset" }, h("div", { class: "md-footer-meta__inner md-grid" }, ${JSON.stringify(text)}))));`;
   const next = src.replace(
     /\/\/ FOOTER-RENDERER-START[\s\S]*?\/\/ FOOTER-RENDERER-END/,
     `// FOOTER-RENDERER-START\n${replacement}\n// FOOTER-RENDERER-END`
