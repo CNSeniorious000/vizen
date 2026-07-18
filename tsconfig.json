@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "useDefineForClassFields": true,
+    "types": ["bun"],
+    "paths": {
+      "@zensical/core": ["./packages/core/src/index.ts"],
+      "@zensical/core/*": ["./packages/core/src/*"],
+      "@zensical/runtime": ["./packages/runtime/src/index.ts"],
+      "@zensical/runtime/*": ["./packages/runtime/src/*"],
+      "@zensical/ui": ["./packages/ui/src/index.ts"],
+      "@zensical/ui/*": ["./packages/ui/src/*"]
+    }
+  },
+  "include": ["packages/*/src/**/*.ts", "packages/*/src/**/*.tsx", "vitest.config.ts"]
+}
