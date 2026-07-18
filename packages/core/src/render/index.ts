@@ -4,7 +4,7 @@
 
 import type { Config, PageMeta } from "../config/index.ts";
 import type { MarkdownResult } from "../markdown/index.ts";
-import type { Nav, Toc } from "../nav/index.ts";
+import type { Nav, NavNode, Toc } from "../nav/index.ts";
 
 export interface RenderContext {
   config: Config;
@@ -65,11 +65,23 @@ export async function renderSite(_ctx: { config: Config }): Promise<Map<string, 
   return new Map();
 }
 
-/** SSR an island: render the Preact component to string, wrap in its host with serialized
- *  props so the runtime can hydrate without re-fetching. */
+/** SSR an island: render the Preact component to string, then inject the serialized
+ *  props as a <script data-md-props> INSIDE the island's root element (before its closing
+ *  tag). Putting it inside — not as a sibling — means the runtime's readProps(host) finds
+ *  it regardless of which element carries data-md-component, and client-nav's serialize
+ *  diff strips it consistently. */
 function island(name: string, props: unknown): string {
   const node = renderIsland(name, props);
-  const propsJson = `<script type="application/json" data-md-props>${esc(JSON.stringify(props))}</script>`;
+  // <script> is a raw-text element: the browser does NOT decode HTML entities inside it,
+  // so we must NOT esc() the JSON (esc would turn " into &quot; and break JSON.parse).
+  // We only neutralize the one sequence that could break out of the script: </script>.
+  const json = JSON.stringify(props).replace(/<\/script/gi, "<\\/script");
+  const propsJson = `<script type="application/json" data-md-props>${json}</script>`;
+  // If the renderer returned a single root element `<tag ...>...</tag>`, inject the props
+  // script just before its closing tag. Otherwise (multiple top-level nodes, e.g. raw
+  // markdown HTML) append at the end — the host wrapper still contains it.
+  const single = node.match(/^(\s*<[\w-]+[^>]*>)([\s\S]*)(<\/[\w-]+>\s*)$/);
+  if (single) return `${single[1]}${single[2]}${propsJson}${single[3]}`;
   return `${node}${propsJson}`;
 }
 
@@ -87,8 +99,26 @@ function renderIsland(name: string, props: unknown): string {
 }
 
 function renderNav(nav: Nav, _page: string): string {
-  const items = nav.map((n) => `<li><a href="${esc(n.url ?? "#")}">${esc(n.title)}</a>${n.children ? `<ul>${renderNav(n.children, _page)}</ul>` : ""}</li>`).join("");
-  return `<nav class="md-nav"><ul>${items}</ul></nav>`;
+  return `<nav class="md-nav" data-md-component="nav"><ul class="md-nav__list">${nav.map(renderNavItem).join("")}</ul></nav>`;
+}
+
+function renderNavItem(n: NavNode): string {
+  // Section: has children, no url → render as a non-clickable span with a nested list (no nested <nav>).
+  if (n.children) {
+    const head = n.url
+      ? `<a class="md-nav__link" href="${esc(normalizeNavUrl(n.url))}">${esc(n.title)}</a>`
+      : `<span class="md-nav__link md-nav__link--section">${esc(n.title)}</span>`;
+    return `<li class="md-nav__item md-nav__item--nested">${head}<ul class="md-nav__list">${n.children.map(renderNavItem).join("")}</ul></li>`;
+  }
+  return `<li class="md-nav__item"><a class="md-nav__link" href="${esc(normalizeNavUrl(n.url ?? ""))}">${esc(n.title)}</a></li>`;
+}
+
+/** Normalize a nav url to match mkdocs conventions: empty → "/", directory pages get a trailing slash. */
+function normalizeNavUrl(url: string): string {
+  if (url === "") return "/";
+  // Leave absolute urls, fragments, and files with an extension (e.g. "foo.pdf") alone.
+  if (url.startsWith("/") || url.startsWith("#") || /\.[^/]*$/.test(url)) return url;
+  return url.endsWith("/") ? url : `${url}/`;
 }
 
 function renderToc(toc: Toc): string {

@@ -125,14 +125,19 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
     return { url, swapped, fromCache, durationMs: now() - t0 };
   }
 
-  /** The heart of incremental navigation: walk every island in the new doc, and for each,
-   *  replace the current host's children ONLY if the serialized content differs. Islands
-   *  that didn't change are left byte-identical — no reflow, no state loss. */
+  /** The heart of incremental navigation: walk every LEAF island in the new doc (one that
+   *  contains no other island), and for each, replace the current host ONLY if its
+   *  serialized content differs. We skip container islands (those that wrap other islands)
+   *  because replacing a container would swap its children too, defeating the "only the
+   *  changed spot refreshes" guarantee — a changed content island must not take the footer
+   *  with it. */
   function swapIslands(next: Document): string[] {
     const swapped: string[] = [];
     const current = owner;
-    const nextIslands = next.querySelectorAll(`[${ISLAND_ATTR}]`);
-    nextIslands.forEach((nextHost) => {
+    const nextIslands = Array.from(next.querySelectorAll(`[${ISLAND_ATTR}]`));
+    // Leaf islands only: no [data-md-component] descendant.
+    const nextLeaves = nextIslands.filter((h) => !h.querySelector(`[${ISLAND_ATTR}]`));
+    for (const nextHost of nextLeaves) {
       const name = nextHost.getAttribute(ISLAND_ATTR)!;
       const curHosts = current.querySelectorAll(`[${ISLAND_ATTR}="${name}"]`);
       // Match by island id (name + position) so the right host is swapped when there are
@@ -143,25 +148,24 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
         // New island that didn't exist before — append it next to its nearest present sibling.
         insertNewIsland(nextHost, name);
         swapped.push(name);
-        return;
+        continue;
       }
-      if (serialize(curHost) === serialize(nextHost)) return; // unchanged — leave it alone
+      if (serialize(curHost) === serialize(nextHost)) continue; // unchanged — leave it alone
       const cloned = nextHost.cloneNode(true) as Element;
       curHost.replaceWith(cloned);
       // Scripts inserted via cloneNode/replaceWith do NOT execute. Re-create each <script>
       // so the browser runs it — mkdocs-material relies on this for inline page scripts.
       reexecuteScripts(cloned);
       swapped.push(name);
-    });
+    }
 
-    // Remove islands present in current but absent in next (e.g. a sidebar hidden on the
-    // destination page).
+    // Remove leaf islands present in current but absent in next (e.g. a sidebar hidden on
+    // the destination page). Only leaves — containers are left for their leaves to manage.
+    const nextLeafIds = new Set(nextLeaves.map((h) => `${h.getAttribute(ISLAND_ATTR)}::${islandId(h)}`));
     current.querySelectorAll(`[${ISLAND_ATTR}]`).forEach((curHost) => {
-      const name = curHost.getAttribute(ISLAND_ATTR)!;
-      const id = islandId(curHost);
-      const stillThere = next.querySelector(`[${ISLAND_ATTR}="${name}"]`);
-      const stillThereId = stillThere && islandId(stillThere) === id;
-      if (!stillThereId) curHost.remove();
+      if (curHost.querySelector(`[${ISLAND_ATTR}]`)) return; // skip containers
+      const key = `${curHost.getAttribute(ISLAND_ATTR)}::${islandId(curHost)}`;
+      if (!nextLeafIds.has(key)) curHost.remove();
     });
 
     return swapped;
@@ -285,11 +289,14 @@ async function fetchDoc(url: URL): Promise<Document> {
   return new DOMParser().parseFromString(html, "text/html");
 }
 
-/** Cheap structural signature of an island's content, used to decide whether a swap is
- *  needed. We compare outerHTML rather than a deep equality walk — it's O(n) in DOM size
- *  but islands are small, and string compare is what the browser is good at. */
+/** Structural signature of an island, used to decide whether a swap is needed. We compare
+ *  outerHTML but strip the props <script> (runtime-injected, not part of the visual
+ *  content) and normalize whitespace, so a hydrate that re-serializes the props script or
+ *  collapses insignificant whitespace doesn't cause a false "changed" swap. */
 function serialize(host: Element): string {
-  return host.outerHTML;
+  const clone = host.cloneNode(true) as Element;
+  clone.querySelectorAll("script[data-md-props]").forEach((s) => s.remove());
+  return clone.outerHTML.replace(/\s+/g, " ").trim();
 }
 
 function now(): number {
