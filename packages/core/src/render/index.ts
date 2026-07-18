@@ -16,6 +16,8 @@ export interface RenderContext {
   next?: { title: string; url: string };
   base_url: string;
   generator: string;
+  /** URL of the runtime entry script. Dev: /@vizen/entry (Vite alias). Build: /assets/javascripts/bundle.js. */
+  entryUrl: string;
 }
 
 export async function renderPage(ctx: RenderContext): Promise<string> {
@@ -57,7 +59,7 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
     </div>
 
     <script id="__config" type="application/json">${JSON.stringify({ base: ctx.base_url, features })}</script>
-    <script type="module" src="/@vizen/entry"></script>
+    <script type="module" src="${ctx.entryUrl}"></script>
   </body>
 </html>`;
 }
