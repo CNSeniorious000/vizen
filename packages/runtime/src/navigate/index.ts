@@ -102,11 +102,16 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
     }
 
     const swapped = swapIslands(doc);
+    syncHead(doc);
 
     // Title + history. We update history AFTER the swap so a popstate during swap is consistent.
     if (doc.title) owner.title = doc.title;
+    // We own scroll position (saved per-history-entry below), so disable the browser's
+    // native scroll restoration which would fight us.
+    const hist = owner.defaultView?.history;
+    if (hist) hist.scrollRestoration = "manual";
     const method = goOpts.replace ? "replaceState" : "pushState";
-    owner.defaultView?.history[method]({ zensical: url.href }, "", url.href);
+    hist?.[method]({ zensical: url.href }, "", url.href);
 
     // Scroll: hash → element; otherwise top (unless replace, which preserves scroll).
     if (url.hash) {
@@ -141,7 +146,11 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
         return;
       }
       if (serialize(curHost) === serialize(nextHost)) return; // unchanged — leave it alone
-      curHost.replaceWith(nextHost.cloneNode(true));
+      const cloned = nextHost.cloneNode(true) as Element;
+      curHost.replaceWith(cloned);
+      // Scripts inserted via cloneNode/replaceWith do NOT execute. Re-create each <script>
+      // so the browser runs it — mkdocs-material relies on this for inline page scripts.
+      reexecuteScripts(cloned);
       swapped.push(name);
     });
 
@@ -163,7 +172,41 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
     const parent = nextHost.parentElement;
     if (!parent) return;
     const targetParent = owner.querySelector(parent.tagName.toLowerCase());
-    targetParent?.appendChild(nextHost.cloneNode(true));
+    const cloned = nextHost.cloneNode(true) as Element;
+    targetParent?.appendChild(cloned);
+    reexecuteScripts(cloned);
+  }
+
+  /** Re-create every <script> under `root` so the browser executes it. A <script> inserted
+   *  via DOM manipulation (cloneNode/appendChild/replaceWith) is NOT executed; only a
+   *  freshly-created <script> element inserted into the document runs. */
+  function reexecuteScripts(root: Element) {
+    for (const old of Array.from(root.querySelectorAll("script"))) {
+      const fresh = owner.createElement("script");
+      for (const attr of old.getAttributeNames()) fresh.setAttribute(attr, old.getAttribute(attr)!);
+      fresh.textContent = old.textContent;
+      old.replaceWith(fresh);
+    }
+  }
+
+  /** Diff <head>: add meta/link/title tags present in `next` but absent in `current`,
+   *  remove those absent in `next`. Preserves tags the runtime owns (theme-color etc.). */
+  function syncHead(next: Document) {
+    const currentTags = new Set(Array.from(owner.head.children).map((el) => el.outerHTML));
+    const nextTags = new Map(Array.from(next.head.children).map((el) => [el.outerHTML, el] as const));
+    // Add new tags.
+    for (const [html, el] of nextTags) {
+      if (currentTags.has(html)) continue;
+      owner.head.appendChild(el.cloneNode(true));
+    }
+    // Remove vanished tags, except those the runtime manages dynamically.
+    const protected_ = new Set(["theme-color", "color-scheme"]);
+    for (const el of Array.from(owner.head.children)) {
+      if (nextTags.has(el.outerHTML)) continue;
+      const name = el.getAttribute("name");
+      if (name && protected_.has(name)) continue;
+      el.remove();
+    }
   }
 
   // --- link interception --------------------------------------------------
