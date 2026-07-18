@@ -141,14 +141,15 @@ function renderNav(nav: Nav, _page: string): string {
 }
 
 function renderNavItem(n: NavNode): string {
-  // Section: has children, no url → render as a non-clickable span with a nested list (no nested <nav>).
+  const activeCls = n.active ? " md-nav__item--active" : "";
+  // Section: has children → render head (span if no url, a if url) + nested list.
   if (n.children) {
     const head = n.url
-      ? `<a class="md-nav__link" href="${esc(normalizeNavUrl(n.url))}">${esc(n.title)}</a>`
-      : `<span class="md-nav__link md-nav__link--section">${esc(n.title)}</span>`;
-    return `<li class="md-nav__item md-nav__item--nested">${head}<ul class="md-nav__list">${n.children.map(renderNavItem).join("")}</ul></li>`;
+      ? `<a class="md-nav__link${n.active ? " md-nav__link--active" : ""}" href="${esc(normalizeNavUrl(n.url))}">${esc(n.title)}</a>`
+      : `<span class="md-nav__link md-nav__link--section${n.active ? " md-nav__link--active" : ""}">${esc(n.title)}</span>`;
+    return `<li class="md-nav__item md-nav__item--nested${activeCls}">${head}<ul class="md-nav__list">${n.children.map(renderNavItem).join("")}</ul></li>`;
   }
-  return `<li class="md-nav__item"><a class="md-nav__link" href="${esc(normalizeNavUrl(n.url ?? ""))}">${esc(n.title)}</a></li>`;
+  return `<li class="md-nav__item${activeCls}"><a class="md-nav__link${n.active ? " md-nav__link--active" : ""}" href="${esc(normalizeNavUrl(n.url ?? ""))}">${esc(n.title)}</a></li>`;
 }
 
 /** Normalize a nav url to match mkdocs conventions: empty → "/", directory pages get a trailing slash. */
