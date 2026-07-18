@@ -2,7 +2,7 @@
 // This module is what Vite injects into the dev server's HTML; in production it's the
 // single <script> tag at the bottom of base.html.
 
-import { createHmrClient, type HmrClient } from "./hmr/index.ts";
+import { getHmrClient, type HmrClient } from "./hmr/index.ts";
 import { createNavigator, type Navigator, type NavigationOptions } from "./navigate/index.ts";
 
 export interface MountOptions extends NavigationOptions {
@@ -24,7 +24,7 @@ export function mount(opts: MountOptions = {}): MountedRuntime {
   const wantHmr = opts.hmr ?? inDev;
   const wantNav = opts.navigate ?? true;
 
-  const hmr = wantHmr ? createHmrClient() : null;
+  const hmr = wantHmr ? getHmrClient() : null;
   const navigator = wantNav ? createNavigator(opts) : null;
 
   if (hmr && inDev) {
