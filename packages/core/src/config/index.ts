@@ -59,7 +59,7 @@ export async function loadConfig(path: string): Promise<Config> {
   return normalize(raw);
 }
 
-function normalize(raw: Partial<Config>): Config {
+export function normalize(raw: Partial<Config>): Config {
   const docs_dir = raw.docs_dir ?? "docs";
   return {
     site_name: raw.site_name ?? "My Docs",
