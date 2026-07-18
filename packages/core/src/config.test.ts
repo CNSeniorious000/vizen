@@ -4,17 +4,17 @@ import { loadConfig, normalize } from "./config/index.ts";
 
 const FIXTURE = join(import.meta.dirname, "__fixtures__");
 
-describe("zensical.toml (native format)", () => {
-  it("loads a zensical.toml config", async () => {
-    const config = await loadConfig(join(FIXTURE, "zensical.toml"));
+describe("vizen.toml (native format)", () => {
+  it("loads a vizen.toml config", async () => {
+    const config = await loadConfig(join(FIXTURE, "vizen.toml"));
     expect(config.site_name).toBe("Zensical TOML Fixture");
-    expect(config.site_description).toBe("A fixture using the native zensical.toml format");
+    expect(config.site_description).toBe("A fixture using the native vizen.toml format");
     expect(config.theme.variant).toBe("modern");
     expect(config.theme.features).toContain("navigation.instant");
   });
 
   it("parses TOML [[nav]] table arrays into the same NavItem shape as YAML", async () => {
-    const config = await loadConfig(join(FIXTURE, "zensical.toml"));
+    const config = await loadConfig(join(FIXTURE, "vizen.toml"));
     expect(config.nav).toBeDefined();
     // Home: titled page { Home: "index.md" }
     expect(config.nav![0]).toEqual({ Home: "index.md" });
@@ -25,8 +25,8 @@ describe("zensical.toml (native format)", () => {
     expect(section["Getting Started"][1]).toEqual({ Installation: "getting-started/installation.md" });
   });
 
-  it("zensical.toml and mkdocs.yml produce equivalent configs", async () => {
-    const toml = await loadConfig(join(FIXTURE, "zensical.toml"));
+  it("vizen.toml and mkdocs.yml produce equivalent configs", async () => {
+    const toml = await loadConfig(join(FIXTURE, "vizen.toml"));
     const yml = await loadConfig(join(FIXTURE, "mkdocs.yml"));
     // Same structure, different site_name (fixtures differ intentionally) — compare nav.
     expect(JSON.stringify(toml.nav)).toBe(JSON.stringify(yml.nav));

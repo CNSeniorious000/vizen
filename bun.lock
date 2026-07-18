@@ -23,10 +23,10 @@
       },
     },
     "packages/core": {
-      "name": "@zensical/core",
+      "name": "@vizen/core",
       "version": "0.0.1",
       "dependencies": {
-        "@zensical/ui": "workspace:*",
+        "@vizen/ui": "workspace:*",
         "chokidar": "^4.0.0",
         "gray-matter": "^4.0.3",
         "marked": "^15.0.0",
@@ -44,7 +44,7 @@
       },
     },
     "packages/runtime": {
-      "name": "@zensical/runtime",
+      "name": "@vizen/runtime",
       "version": "0.0.1",
       "dependencies": {
         "preact": "^10.29.0",
@@ -54,7 +54,7 @@
       },
     },
     "packages/ui": {
-      "name": "@zensical/ui",
+      "name": "@vizen/ui",
       "version": "0.0.1",
       "dependencies": {
         "preact": "^10.29.0",
@@ -356,11 +356,11 @@
 
     "@vitest/utils": ["@vitest/utils@3.2.7", "", { "dependencies": { "@vitest/pretty-format": "3.2.7", "loupe": "^3.1.4", "tinyrainbow": "^2.0.0" } }, "sha512-x6BDOd7dyo3PFLY3I9/HJ25X/6OurhGXk2/B9gOZNPF7XDVjeBK4k01lQE5uvDpbuheErh91qYuE1E2OEjK3Rw=="],
 
-    "@zensical/core": ["@zensical/core@workspace:packages/core"],
+    "@vizen/core": ["@vizen/core@workspace:packages/core"],
 
-    "@zensical/runtime": ["@zensical/runtime@workspace:packages/runtime"],
+    "@vizen/runtime": ["@vizen/runtime@workspace:packages/runtime"],
 
-    "@zensical/ui": ["@zensical/ui@workspace:packages/ui"],
+    "@vizen/ui": ["@vizen/ui@workspace:packages/ui"],
 
     "argparse": ["argparse@1.0.10", "", { "dependencies": { "sprintf-js": "~1.0.2" } }, "sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg=="],
 

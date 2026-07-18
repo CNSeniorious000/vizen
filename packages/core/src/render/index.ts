@@ -57,7 +57,7 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
     </div>
 
     <script id="__config" type="application/json">${JSON.stringify({ base: ctx.base_url, features })}</script>
-    <script type="module" src="/@zensical/entry"></script>
+    <script type="module" src="/@vizen/entry"></script>
   </body>
 </html>`;
 }
@@ -87,7 +87,7 @@ function island(name: string, props: unknown): string {
   return `${node}${propsJson}`;
 }
 
-// Minimal island renderers — replaced by real @zensical/ui components once ported.
+// Minimal island renderers — replaced by real @vizen/ui components once ported.
 function renderIsland(name: string, props: unknown): string {
   const p = props as Record<string, unknown>;
   switch (name) {

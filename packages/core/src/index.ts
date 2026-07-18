@@ -1,4 +1,4 @@
-// @zensical/core — the SSG. TS port of zensical (Rust) + mkdocs-material (Python).
+// @vizen/core — the SSG. TS port of zensical (Rust) + mkdocs-material (Python).
 // Config → markdown → nav/toc → SSR (Preact renderToString) → build/serve/watch.
 
 export { loadConfig, type Config, type NavItem, type PageMeta } from "./config/index.ts";

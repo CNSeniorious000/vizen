@@ -22,12 +22,12 @@
     "useDefineForClassFields": true,
     "types": ["bun"],
     "paths": {
-      "@zensical/core": ["./packages/core/src/index.ts"],
-      "@zensical/core/*": ["./packages/core/src/*"],
-      "@zensical/runtime": ["./packages/runtime/src/index.ts"],
-      "@zensical/runtime/*": ["./packages/runtime/src/*"],
-      "@zensical/ui": ["./packages/ui/src/index.ts"],
-      "@zensical/ui/*": ["./packages/ui/src/*"]
+      "@vizen/core": ["./packages/core/src/index.ts"],
+      "@vizen/core/*": ["./packages/core/src/*"],
+      "@vizen/runtime": ["./packages/runtime/src/index.ts"],
+      "@vizen/runtime/*": ["./packages/runtime/src/*"],
+      "@vizen/ui": ["./packages/ui/src/index.ts"],
+      "@vizen/ui/*": ["./packages/ui/src/*"]
     }
   },
   "include": ["packages/*/src/**/*.ts", "packages/*/src/**/*.tsx", "vitest.config.ts"]

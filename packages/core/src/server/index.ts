@@ -100,7 +100,7 @@ async function renderPageFromMd(config: Config, docsDir: string, mdPath: string,
     prev: prev && prev.url ? { title: prev.title, url: prev.url } : undefined,
     next: next && next.url ? { title: next.title, url: next.url } : undefined,
     base_url: "/",
-    generator: "zensical-vite",
+    generator: "vizen",
   };
 }
 
@@ -111,15 +111,15 @@ function urlToMdPath(url: string, _docsDir: string): string | null {
 }
 
 async function findConfig(root: string): Promise<string> {
-  // zensical.toml is the preferred native format; fall back to mkdocs.yml for
+  // vizen.toml is the preferred native format; fall back to mkdocs.yml for
   // drop-in compatibility with existing Material for MkDocs projects.
-  for (const name of ["zensical.toml", "mkdocs.yml", "mkdocs.yaml", "zensical.yml"]) {
+  for (const name of ["vizen.toml", "mkdocs.yml", "mkdocs.yaml", "vizen.yml"]) {
     try {
       await stat(join(root, name));
       return join(root, name);
     } catch { /* try next */ }
   }
-  return join(root, "zensical.toml");
+  return join(root, "vizen.toml");
 }
 
 function basename(p: string): string {

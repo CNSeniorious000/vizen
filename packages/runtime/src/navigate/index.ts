@@ -46,7 +46,7 @@ export interface Navigator {
   destroy(): void;
 }
 
-const NAV_HEADER = "X-Zensical-Navigate";
+const NAV_HEADER = "X-Vizen-Navigate";
 const NAV_VALUE = "1";
 
 export function createNavigator(opts: NavigationOptions = {}): Navigator {
@@ -111,7 +111,7 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
     const hist = owner.defaultView?.history;
     if (hist) hist.scrollRestoration = "manual";
     const method = goOpts.replace ? "replaceState" : "pushState";
-    hist?.[method]({ zensical: url.href }, "", url.href);
+    hist?.[method]({ vizen: url.href }, "", url.href);
 
     // Scroll: hash → element; otherwise top (unless replace, which preserves scroll).
     if (url.hash) {
@@ -237,7 +237,7 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
   };
 
   const onPop = (e: PopStateEvent) => {
-    const href = (e.state && e.state.zensical) as string | undefined;
+    const href = (e.state && e.state.vizen) as string | undefined;
     if (!href) return;
     void go(href, { replace: true });
   };

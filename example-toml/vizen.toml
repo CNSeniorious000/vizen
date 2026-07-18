@@ -1,9 +1,9 @@
-# zensical.toml — the native config format for zensical-vite.
-# Equivalent to mkdocs.yml but in TOML. Run `zensical serve` in a directory with this
+# vizen.toml — the native config format for vizen.
+# Equivalent to mkdocs.yml but in TOML. Run `vizen serve` in a directory with this
 # file (or mkdocs.yml) and it'll be picked up automatically.
 
 site_name = "Zensical TOML Fixture"
-site_description = "A fixture using the native zensical.toml format"
+site_description = "A fixture using the native vizen.toml format"
 docs_dir = "docs"
 
 [theme]

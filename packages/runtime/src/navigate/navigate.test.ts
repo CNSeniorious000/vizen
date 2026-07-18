@@ -53,7 +53,7 @@ describe("client-side navigation", () => {
     await nav.go("/page-a/");
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringMatching(/\/page-a\/$/),
-      expect.objectContaining({ headers: expect.objectContaining({ "X-Zensical-Navigate": "1", Accept: "text/html" }) })
+      expect.objectContaining({ headers: expect.objectContaining({ "X-Vizen-Navigate": "1", Accept: "text/html" }) })
     );
   });
 
