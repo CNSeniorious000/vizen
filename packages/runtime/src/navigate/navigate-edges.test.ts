@@ -18,12 +18,11 @@ function pageHtml(opts: { title?: string; content?: string; meta?: string; scrip
 
 describe("navigation edge cases", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
-  let pushState: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     document.body.innerHTML = `<div ${ISLAND_ATTR}="content"><p>home</p></div>`;
     Object.defineProperty(window, "history", {
-      value: { pushState: (pushState = vi.fn()), replaceState: vi.fn(), scrollRestoration: "auto" },
+      value: { pushState: vi.fn(), replaceState: vi.fn(), scrollRestoration: "auto" },
       writable: true,
     });
     fetchMock = vi.fn();

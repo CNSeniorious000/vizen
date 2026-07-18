@@ -2,6 +2,7 @@
 // TS port of zensical/python/zensical/config.py + mkdocs config schema.
 
 import { parse as parseYaml } from "yaml";
+import { readFile } from "node:fs/promises";
 
 export interface Config {
   site_name: string;
@@ -37,16 +38,11 @@ export interface PaletteConfig {
   toggle?: { icon?: string; name?: string };
 }
 
-export type NavItem = NavSection | NavPage;
-
-export interface NavSection {
-  [section: string]: (string | NavItem)[];
-}
-
-export interface NavPage {
-  page: string;
-  title?: string;
-}
+/** A nav entry as written in mkdocs.yml. Three forms:
+ *  - "path.md"                         (bare path)
+ *  - { Title: "path.md" }             (titled single page)
+ *  - { Section: [NavItem, ...] }       (nested section) */
+export type NavItem = string | { [title: string]: string | NavItem[] };
 
 export interface PageMeta {
   title?: string;
@@ -58,7 +54,7 @@ export interface PageMeta {
 }
 
 export async function loadConfig(path: string): Promise<Config> {
-  const file = await Bun.file(path).text();
+  const file = await readFile(path, "utf8");
   const raw = parseYaml(file) as Partial<Config>;
   return normalize(raw);
 }

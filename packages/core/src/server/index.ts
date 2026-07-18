@@ -11,10 +11,11 @@
 import { createServer as createViteServer, type ViteDevServer, type InlineConfig } from "vite";
 import { loadConfig, type Config } from "../config/index.ts";
 import { renderMarkdown } from "../markdown/index.ts";
-import { buildNav, buildToc, type PageRef } from "../nav/index.ts";
+import { buildNav, buildToc } from "../nav/index.ts";
 import { renderPage, type RenderContext } from "../render/index.ts";
-import { join, relative, sep } from "node:path";
-import { readdir, stat, mkdir, writeFile } from "node:fs/promises";
+import { collectPages } from "./collect.ts";
+import { join } from "node:path";
+import { stat, mkdir, writeFile, readFile } from "node:fs/promises";
 
 export interface ServerOptions {
   root: string;
@@ -71,7 +72,7 @@ export async function createBuildServer(opts: ServerOptions): Promise<void> {
 // --- helpers --------------------------------------------------------------
 
 async function renderPageFromMd(config: Config, docsDir: string, mdPath: string, url: string): Promise<RenderContext> {
-  const src = await Bun.file(join(docsDir, mdPath)).text();
+  const src = await readFile(join(docsDir, mdPath), "utf8");
   const content = await renderMarkdown(src, { extensions: config.markdown_extensions, base: url });
   const pages = await collectPages(docsDir);
   const nav = buildNav(config, pages);
@@ -85,26 +86,6 @@ async function renderPageFromMd(config: Config, docsDir: string, mdPath: string,
     base_url: "/",
     generator: "zensical-vite",
   };
-}
-
-async function collectPages(docsDir: string): Promise<PageRef[]> {
-  const out: PageRef[] = [];
-  async function walk(dir: string) {
-    const entries = await readdir(dir, { withFileTypes: true });
-    for (const e of entries) {
-      const full = join(dir, e.name);
-      if (e.isDirectory()) await walk(full);
-      else if (e.name.endsWith(".md")) {
-        const rel = relative(docsDir, full).split(sep).join("/");
-        const url = rel.replace(/(index)?\.md$/, "") || "";
-        const src = await Bun.file(full).text();
-        const title = src.match(/^#\s+(.+)$/m)?.[1] ?? rel;
-        out.push({ path: rel, url: url || "", title });
-      }
-    }
-  }
-  await walk(docsDir);
-  return out;
 }
 
 function urlToMdPath(url: string, _docsDir: string): string | null {
