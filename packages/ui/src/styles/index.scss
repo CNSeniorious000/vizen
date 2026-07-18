@@ -1,0 +1,51 @@
+////
+/// @zensical/ui — SCSS entry, ported from zensical/ui `src/assets/stylesheets/modern`.
+///
+/// This file re-exports the full modern stylesheet (base + palette). Consumers
+/// should import `@zensical/ui/styles` (which resolves here) to pull in all
+/// component, extension, integration, and modifier styles.
+///
+/// IMPORTANT — Sass `includePaths` / `loadPaths` configuration required:
+///
+/// The upstream SCSS uses `@import "material-color"` and `@import "material-shadows"`
+/// (bare imports resolved via `loadPaths`). For Vite, configure:
+///
+///   // vite.config.ts
+///   css: {
+///     preprocessorOptions: {
+///       scss: {
+///         silenceDeprecations: ["legacy-js-api", "import"],
+///         additionalData: `$injected-base: 1;`, // optional
+///         // The legacy API uses `includePaths`; the modern API uses `loadPaths`.
+///         // Vite passes these through to sass. Use either:
+///         includePaths: [
+///           "node_modules/material-design-color",
+///           "node_modules/material-shadows",
+///         ],
+///         // …or, if your Vite version uses the modern API:
+///         // loadPaths: [
+///         //   "node_modules/material-design-color",
+///         //   "node_modules/material-shadows",
+///         // ],
+///       },
+///     },
+///   },
+///
+/// Additionally, `svg-load("lucide/<icon>.svg")` calls in `_typeset.scss`,
+/// `_clipboard.scss`, `_code.scss`, and `mkdocstrings/_python.scss` require
+/// `postcss-inline-svg` with `paths: ["<icons-root>"]` where `<icons-root>`
+/// contains a `lucide/` subdirectory of SVG files (upstream uses
+/// `lucide-static`). If you don't run postcss-inline-svg, replace `svg-load(...)`
+/// calls with `url(...)` or inline SVG data URIs.
+///
+/// Required devDependencies (already added to package.json):
+///   - material-design-color@^2.3.2  (provides `$clr-*` color variables)
+///   - material-shadows@^3.0.1        (provides `$md-shadow-*` elevation mixins)
+///
+/// Optional (for `svg-load` icon resolution, not a Sass dep):
+///   - lucide-static@^1.21.0          (SVG icons referenced by `svg-load("lucide/...")`)
+///   - postcss-inline-svg@^6.0.0      (resolves `svg-load()` at PostCSS time)
+////
+
+@import "./main";
+@import "./palette";

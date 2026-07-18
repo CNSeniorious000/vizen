@@ -10,7 +10,7 @@
 //     element and let Preact reconcile. Because the host is reused, Preact preserves
 //     unmounted subtrees and DOM state by key identity.
 
-import { render as preactRender, type VNode } from "preact";
+import { render as preactRender, hydrate as preactHydrate, type VNode } from "preact";
 import { ISLAND_ATTR, islandId } from "../island.ts";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,16 +50,18 @@ export function createHmrClient(): HmrClient {
   return {
     register(island, render) {
       registry.set(island, render);
-      // Initial mount: clear the SSR host and render fresh. Preact's render appends, so
-      // we must clear first or stale SSR children linger. The host element itself is
-      // reused, so surrounding DOM is untouched.
+      // Initial mount: hydrate the SSR markup in place. Hydration attaches event
+      // handlers to the existing DOM WITHOUT re-creating nodes — this preserves the
+      // server-rendered HTML so client-side navigation can diff islands against the same
+      // SSR output the next page produces. (If we used render here, Preact would rebuild
+      // the DOM and the island's live markup would diverge from SSR, causing every
+      // navigation to falsely detect a change and swap.)
       for (const host of findHosts(island)) {
         const id = islandId(host);
         if (mounted.has(id)) continue;
         const props = readProps(host);
         mounted.set(id, { host, render, props });
-        host.replaceChildren();
-        preactRender(render(props), host);
+        preactHydrate(render(props), host);
       }
     },
 
@@ -90,10 +92,12 @@ export function createHmrClient(): HmrClient {
   };
 }
 
-/** Props are serialized into a `<script type="application/json" data-md-props="...">` child
- *  of the island host at SSR time. Keeps the DOM the source of truth (no separate state). */
+/** Props are serialized into a `<script type="application/json" data-md-props>` child of
+ *  the island host at SSR time. Keeps the DOM the source of truth (no separate state). */
 function readProps(host: Element): unknown {
-  const node = host.querySelector(`:scope > script[data-md-props]`);
+  // Query without :scope > so we find the props script even if the host wraps it in
+  // another element (the SSR layout puts it as a direct child, but be lenient).
+  const node = host.querySelector("script[data-md-props]");
   if (!node?.textContent) return null;
   try {
     return JSON.parse(node.textContent);

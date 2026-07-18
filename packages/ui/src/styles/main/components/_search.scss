@@ -1,0 +1,115 @@
+////
+/// Copyright (c) 2025-2026 Zensical and contributors
+///
+/// SPDX-License-Identifier: MIT
+/// Third-party contributions licensed under DCO
+///
+/// Permission is hereby granted, free of charge, to any person obtaining a
+/// copy of this software and associated documentation files (the "Software"),
+/// to deal in the Software without restriction, including without limitation
+/// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+/// and/or sell copies of the Software, and to permit persons to whom the
+/// Software is furnished to do so, subject to the following conditions:
+///
+/// The above copyright notice and this permission notice shall be included in
+/// all copies or substantial portions of the Software.
+///
+/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+/// FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL
+/// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+/// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+/// DEALINGS
+////
+
+// ----------------------------------------------------------------------------
+// Rules
+// ----------------------------------------------------------------------------
+
+// Search variables
+:root {
+  --md-search-icon: svg-load("lucide/search.svg");
+}
+
+// ----------------------------------------------------------------------------
+
+// Search
+.md-search {
+  position: relative;
+
+  // [tablet landscape +]: Header-embedded search
+  @include break-from-device(tablet portrait) {
+    padding: px2rem(4px) 0;
+  }
+
+  // [screen -]: Hide search input
+  @include break-to-device(tablet portrait) {
+    display: none;
+  }
+
+  // [no-js]: Hide search
+  .no-js & {
+    display: none;
+  }
+
+  // Search button
+  &__button {
+    position: relative;
+    padding-inline: px2rem(38px) px2rem(44px);
+    color: var(--md-default-fg-color);
+    background: var(--md-default-bg-color);
+    font-size: px2rem(14px);
+    text-align: left;
+    cursor: pointer;
+
+    // [tablet landscape +]: Header-embedded search
+    @include break-from-device(tablet portrait) {
+      width: px2rem(178px);
+      height: px2rem(32px);
+      background-color: var(--md-default-fg-color--lightest);
+      border-radius: px2rem(8px);
+      transition: background-color 400ms, color 400ms;
+
+      // Search on focus/hover
+      &:is(:focus, :hover) {
+        color: var(--md-default-fg-color);
+        background-color: var(--md-default-fg-color--lighter);
+      }
+    }
+
+    // Search icon
+    &::before {
+      position: absolute;
+      inset-inline-start: 0;
+      top: px2rem(6px);
+      margin-left: px2rem(10px);
+      width: px2rem(20px);
+      height: px2rem(20px);
+      content: "";
+      background-color: var(--md-default-fg-color);
+      mask-image: var(--md-search-icon);
+      mask-repeat: no-repeat;
+      mask-position: center;
+      mask-size: contain;
+    }
+
+    // Keyboard shortcut
+    &::after {
+      position: absolute;
+      top: px2rem(7px);
+      right: px2rem(12px);
+      display: block;
+      padding: px2rem(2px) px2rem(4px);
+      font-size: px2rem(12px);
+      content: "Ctrl+K";
+      background: var(--md-default-bg-color--light);
+      border-radius: px2rem(4px);
+
+      // Show macOS shortcut
+      [data-platform^="Mac"] & {
+        content: "⌘K";
+      }
+    }
+  }
+}
