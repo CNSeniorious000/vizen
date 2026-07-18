@@ -1,0 +1,28 @@
+# Publish @vizen/* packages to npm on every PR via pkg.pr.new.
+# Each PR gets a temporary, installable version — no permanent npm publish needed.
+# Reviewers can `bun add https://pkg.pr.new/@vizen/core@<pr>` to try the change.
+name: Publish PR packages
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install
+
+      # Publish the root CLI package + the three workspace libraries.
+      # --compact posts a single comment with install commands for all packages.
+      - run: bunx pkg-pr-new publish . ./packages/core ./packages/runtime ./packages/ui --compact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
