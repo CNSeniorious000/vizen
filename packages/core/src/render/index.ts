@@ -38,7 +38,7 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off" />
     <label class="md-overlay" for="__drawer" aria-label="nav"></label>
 
-    <div data-md-component="header">${island("header", { title: config.site_name })}</div>
+    ${island("header", { siteName: config.site_name, pageTopic: page.meta.title ?? page.title, features, searchEnabled: !!config.plugins?.search })}
     <div class="md-container" data-md-component="container">
       <main class="md-main" data-md-component="main">
         <div class="md-main__inner md-grid">
@@ -89,13 +89,51 @@ function island(name: string, props: unknown): string {
 function renderIsland(name: string, props: unknown): string {
   const p = props as Record<string, unknown>;
   switch (name) {
-    case "header": return `<header class="md-header"><div class="md-header__title">${esc(String(p.title ?? ""))}</div></header>`;
+    case "header": return renderHeader(p);
     case "footer": return `<footer class="md-footer"><div class="md-footer__title">${esc(String(p.site_name ?? ""))}</div></footer>`;
     case "content": return `${p.html ?? ""}`;
     case "nav": return renderNav(p.nav as Nav, p.page as string);
     case "toc": return renderToc(p.toc as Toc);
     default: return "";
   }
+}
+
+// Inline material SVG icons (avoids a network round-trip per icon in dev). The set grows
+// as partials are ported; each is the raw <svg> from @mdi/svg.
+const ICONS: Record<string, string> = {
+  "material/menu": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>`,
+  "material/magnify": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.5 6.5 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2A4.5 4.5 0 0 0 5 9.5 4.5 4.5 0 0 0 9.5 14 4.5 4.5 0 0 0 14 9.5 4.5 4.5 0 0 0 9.5 5z"/></svg>`,
+  "material/theme-light-dark": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.5 2c-.276 0-.5.224-.5.5v2c0 .276.224.5.5.5s.5-.224.5-.5v-2c0-.276-.224-.5-.5-.5zm9 0c-.276 0-.5.224-.5.5v2c0 .276.224.5.5.5s.5-.224.5-.5v-2c0-.276-.224-.5-.5-.5zM4 7v2h2V7H4zm14 0v2h2V7h-2zM3 11c-.553 0-1 .447-1 1v8c0 .553.447 1 1 1h18c.553 0 1-.447 1-1v-8c0-.553-.447-1-1-1H3zm1 2h16v6H4v-6z"/></svg>`,
+};
+
+function icon(name: string): string {
+  return ICONS[name] ?? "";
+}
+
+/** Render the header island — mirrors zensical/ui src/partials/header.html.
+ *  Logo + drawer toggle + title (with page topic) + palette toggle + search trigger. */
+function renderHeader(p: Record<string, unknown>): string {
+  const siteName = String(p.siteName ?? "");
+  const pageTopic = String(p.pageTopic ?? "");
+  const features = (p.features as string[]) ?? [];
+  const searchEnabled = !!p.searchEnabled;
+  // Header shadow class: sticky tabs → lifted+shadow; no tabs → shadow; tabs (non-sticky) → none.
+  const cls = ["md-header"];
+  if (features.includes("navigation.tabs.sticky")) cls.push("md-header--shadow", "md-header--lifted");
+  else if (!features.includes("navigation.tabs")) cls.push("md-header--shadow");
+  return `<header class="${cls.join(" ")}" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/" title="${esc(siteName)}" class="md-header__button md-logo" aria-label="${esc(siteName)}" data-md-component="logo"></a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Menu">${icon("material/menu")}</label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic"><span class="md-ellipsis">${esc(siteName)}</span></div>
+        <div class="md-header__topic" data-md-component="header-topic"><span class="md-ellipsis">${esc(pageTopic)}</span></div>
+      </div>
+    </div>
+    ${searchEnabled ? `<label class="md-header__button md-icon" for="__search" aria-label="Search">${icon("material/magnify")}</label>` : ""}
+  </nav>
+</header>`;
 }
 
 function renderNav(nav: Nav, _page: string): string {

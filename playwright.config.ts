@@ -2,7 +2,8 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: false, // dev server is shared; serialize
+  fullyParallel: false,
+  workers: 1, // HMR test mutates main.ts; serialize so it doesn't pollute client-nav
   retries: 0,
   use: {
     browserName: "chromium",
