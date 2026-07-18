@@ -31,13 +31,20 @@ function buildFromConfigNav(items: NavItem[], pages: PageRef[]): Nav {
 }
 
 function toNode(item: NavItem, pages: PageRef[]): NavNode {
+  // Bare path: "- index.md"
   if (typeof item === "string") {
     const page = pages.find((p) => p.path === item);
     return { title: page?.title ?? item, url: page?.url };
   }
-  // Section: { "Title": [children] }
-  const [title, children] = Object.entries(item)[0]!;
-  return { title, children: (children as NavItem[]).map((c) => toNode(c, pages)) };
+  // Title-keyed: { "Title": <path | [children]> }
+  const [title, value] = Object.entries(item)[0]!;
+  // { "Home": "index.md" } — single page with a custom title.
+  if (typeof value === "string") {
+    const page = pages.find((p) => p.path === value);
+    return { title, url: page?.url };
+  }
+  // { "Section": [children] } — nested section.
+  return { title, children: (value as NavItem[]).map((c) => toNode(c, pages)) };
 }
 
 function buildFromPages(pages: PageRef[]): Nav {

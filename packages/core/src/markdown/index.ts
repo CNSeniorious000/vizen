@@ -51,6 +51,8 @@ function extractToc(body: string): TocItem[] {
   while ((m = re.exec(body))) {
     const level = m[1].length;
     const text = m[2].trim();
+    // mkdocs convention: the H1 is the page title, not a toc entry. Toc starts at H2.
+    if (level === 1) continue;
     items.push({ level, slug: slugify(text), text });
   }
   return nestToc(items);
