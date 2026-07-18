@@ -88,7 +88,7 @@ async function renderPageFromMd(config: Config, docsDir: string, mdPath: string,
   const src = await readFile(join(docsDir, mdPath), "utf8");
   const content = await renderMarkdown(src, { extensions: config.markdown_extensions, base: url });
   const pages = await collectPages(docsDir);
-  const nav = buildNav(config, pages);
+  const nav = buildNav(config, pages, url);
   const toc = buildToc(content.toc, config.theme.features ?? []);
   return {
     config,

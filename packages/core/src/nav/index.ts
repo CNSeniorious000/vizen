@@ -14,16 +14,39 @@ export interface NavNode {
 
 export type Toc = TocItem[];
 
-/** Build the site nav from config.nav (if present) or by walking docs_dir. */
-export function buildNav(config: Config, pages: PageRef[]): Nav {
-  if (config.nav) return buildFromConfigNav(config.nav, pages);
-  return buildFromPages(pages);
+/** Build the site nav from config.nav (if present) or by walking docs_dir.
+ *  `currentUrl` marks the active page (and its ancestor sections) so the sidebar can
+ *  highlight the user's location — a core navigation UX requirement. */
+export function buildNav(config: Config, pages: PageRef[], currentUrl?: string): Nav {
+  const nav = config.nav ? buildFromConfigNav(config.nav, pages) : buildFromPages(pages);
+  if (currentUrl !== undefined) markActive(nav, normalizeUrl(currentUrl));
+  return nav;
 }
 
 export interface PageRef {
   path: string; // e.g. "getting-started/index.md"
   url: string; // e.g. "getting-started/"
   title: string;
+}
+
+/** Mark the node whose url matches `current` as active, and propagate active up to ancestor
+ *  sections (so a section containing the current page is also marked active/expanded). */
+function markActive(nodes: NavNode[], current: string): boolean {
+  let anyActive = false;
+  for (const n of nodes) {
+    const childActive = n.children ? markActive(n.children, current) : false;
+    const selfActive = n.url !== undefined && normalizeUrl(n.url) === current;
+    n.active = selfActive || childActive;
+    if (n.active) anyActive = true;
+  }
+  return anyActive;
+}
+
+function normalizeUrl(url: string): string {
+  // Normalize for comparison: ensure a trailing slash, strip leading slash.
+  let u = url.startsWith("/") ? url.slice(1) : url;
+  if (u && !u.endsWith("/") && !/\.[^/]*$/.test(u)) u += "/";
+  return u;
 }
 
 function buildFromConfigNav(items: NavItem[], pages: PageRef[]): Nav {

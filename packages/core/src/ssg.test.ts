@@ -48,6 +48,17 @@ describe("SSG end-to-end", () => {
     expect(nav[1].children?.[0].title).toBe("Overview");
   });
 
+  it("marks the active page and its ancestor section in nav", async () => {
+    const config = await loadConfig(join(FIXTURE, "mkdocs.yml"));
+    const pages = await collectPages(join(FIXTURE, "docs"));
+    // Current page is getting-started/installation → its section "Getting Started" is active too.
+    const nav = buildNav(config, pages, "getting-started/installation/");
+    expect(nav[0].active).toBeFalsy(); // Home
+    expect(nav[1].active).toBe(true); // Getting Started (ancestor)
+    expect(nav[1].children?.[0].active).toBeFalsy(); // Overview
+    expect(nav[1].children?.[1].active).toBe(true); // Installation (current)
+  });
+
   it("renders a page with island anchors", async () => {
     const config = await loadConfig(join(FIXTURE, "mkdocs.yml"));
     const pages = await collectPages(join(FIXTURE, "docs"));
