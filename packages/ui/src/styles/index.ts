@@ -1,4 +1,4 @@
-// @zensical/ui — SCSS styles entry (ported from zensical/ui `modern` stylesheet).
+// @vizen/ui — SCSS styles entry (ported from zensical/ui `modern` stylesheet).
 //
 // This module exists to document the Sass/Vite configuration required to compile
 // the SCSS in `./`. The actual style entry is `./index.scss` (re-exports

@@ -90,7 +90,7 @@ describe("SSG end-to-end", () => {
       nav,
       toc,
       base_url: "/",
-      generator: "zensical-vite",
+      generator: "vizen",
     });
     // Every island anchor must be present — these are the HMR + client-nav targets.
     expect(html).toContain('data-md-component="header"');
@@ -101,6 +101,6 @@ describe("SSG end-to-end", () => {
     expect(html).toContain("Welcome");
     expect(html).toContain("getting-started/");
     // The runtime entry script is injected.
-    expect(html).toContain("/@zensical/entry");
+    expect(html).toContain("/@vizen/entry");
   });
 });

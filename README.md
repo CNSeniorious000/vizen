@@ -1,4 +1,4 @@
-# zensical-vite
+# vizen
 
 A modern static site generator — a TypeScript port of [zensical](https://github.com/zensical/zensical) (by the Material for MkDocs team), rebuilt on **Vite 8 + Bun** with two non-negotiable features:
 
@@ -27,13 +27,13 @@ bunx tsc --noEmit             # typecheck
 
 ## Configuration
 
-`zensical serve` / `zensical build` auto-discovers config in the project root, preferring **`zensical.toml`** (the native format) and falling back to **`mkdocs.yml`** / `mkdocs.yaml` / `zensical.yml` for drop-in compatibility with existing Material for MkDocs projects.
+`vizen serve` / `vizen build` auto-discovers config in the project root, preferring **`vizen.toml`** (the native format) and falling back to **`mkdocs.yml`** / `mkdocs.yaml` / `vizen.yml` for drop-in compatibility with existing Material for MkDocs projects.
 
-### `zensical.toml` (recommended)
+### `vizen.toml` (recommended)
 
 ```toml
 site_name = "My Docs"
-site_description = "Built with zensical-vite"
+site_description = "Built with vizen"
 docs_dir = "docs"
 
 [theme]
@@ -80,7 +80,7 @@ Both formats parse to the **same** internal `NavItem` structure, so nav renderin
 
 ### Nav shape equivalence
 
-| Case | `zensical.toml` | `mkdocs.yml` |
+| Case | `vizen.toml` | `mkdocs.yml` |
 | --- | --- | --- |
 | Page | `[[nav]]` + `title` + `url` | `- Title: path.md` |
 | Section | `[[nav]]` + `title` + `[[nav.children]]` | `- Section:` + indented list |
@@ -98,7 +98,7 @@ Admonitions (a Material for MkDocs signature) are supported:
 
 ```
 packages/
-  core/      SSG: config (zensical.toml / mkdocs.yml) → markdown → nav/toc → SSR (Preact) → build/serve/watch
+  core/      SSG: config (vizen.toml / mkdocs.yml) → markdown → nav/toc → SSR (Preact) → build/serve/watch
   runtime/   browser: HMR client + client-side navigator (island diff)
   ui/        Preact components + ported zensical/ui SCSS (61 files)
 e2e/         playwright E2E (chromium): HMR + client-nav verified in real browser
@@ -113,7 +113,7 @@ Every swappable region is a `<div data-md-component="X">` island (inherited from
 
 ## Status
 
-- ✅ SSG core: config (`zensical.toml` + `mkdocs.yml`), markdown (with admonitions), nav (active state + prev/next), toc, SSR
+- ✅ SSG core: config (`vizen.toml` + `mkdocs.yml`), markdown (with admonitions), nav (active state + prev/next), toc, SSR
 - ✅ HMR: island-level hot update, DOM state preserved (E2E verified)
 - ✅ Client-side navigation: island diff, preload cache, popstate, scroll restoration (E2E verified)
 - ✅ zensical/ui SCSS ported (modern variant, 61 files) + header/nav/footer partials

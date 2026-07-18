@@ -1,4 +1,4 @@
-// @zensical/runtime — browser-side runtime for HMR + client-side navigation.
+// @vizen/runtime — browser-side runtime for HMR + client-side navigation.
 // Two non-negotiable features:
 //   1. Perfect HMR: only the changed island re-renders; DOM + state elsewhere is preserved.
 //   2. Default client-side navigation (sveltekit-preload-data style): in-app links load only

@@ -1,5 +1,5 @@
 {
-  "name": "@zensical/core",
+  "name": "@vizen/core",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@zensical/ui": "workspace:*",
+    "@vizen/ui": "workspace:*",
     "preact": "^10.29.0",
     "preact-render-to-string": "^6.5.0",
     "gray-matter": "^4.0.3",

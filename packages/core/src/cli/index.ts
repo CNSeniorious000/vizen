@@ -1,4 +1,5 @@
-// CLI — `zensical serve` / `zensical build` / `zensical watch`.
+#!/usr/bin/env bun
+// CLI — `vizen serve` / `vizen build` / `vizen watch`.
 // Thin wrapper over the server module. Uses Bun's argv (no extra dep).
 
 import { createDevServer, createBuildServer } from "../server/index.ts";
@@ -14,16 +15,16 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<vo
       const server = await createDevServer({ root, port });
       const addr = server.httpServer?.address();
       const p = typeof addr === "object" && addr ? addr.port : port;
-      console.log(`zensical dev → http://localhost:${p}`);
+      console.log(`vizen dev → http://localhost:${p}`);
       break;
     }
     case "build": {
       await createBuildServer({ root });
-      console.log("zensical build → done");
+      console.log("vizen build → done");
       break;
     }
     default:
-      console.error(`usage: zensical <serve|build> [root] [--port N]`);
+      console.error(`usage: vizen <serve|build> [root] [--port N]`);
       process.exit(1);
   }
 }

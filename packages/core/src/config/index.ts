@@ -1,5 +1,5 @@
-// Config loading — supports BOTH mkdocs.yml (YAML) and zensical.toml (TOML).
-// zensical.toml is the preferred native format; mkdocs.yml is supported for
+// Config loading — supports BOTH mkdocs.yml (YAML) and vizen.toml (TOML).
+// vizen.toml is the preferred native format; mkdocs.yml is supported for
 // drop-in compatibility with existing Material for MkDocs projects.
 
 import { parse as parseYaml } from "yaml";

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { readFile } from "node:fs/promises";
 import { compileString } from "sass";
 
-// Dev server config for zensical-vite itself (used when running `zensical serve` on a
+// Dev server config for vizen itself (used when running `vizen serve` on a
 // docs project). The SSG's dev server (packages/core/src/server) creates a Vite server
 // in middleware mode and layers its SSR middleware in front; this file provides the
 // shared plugin + alias config.
@@ -19,7 +19,7 @@ function scssDevPlugin(): Plugin {
     "/assets/stylesheets/palette.css": resolve(__dirname, "packages/ui/src/styles/palette.scss"),
   };
   return {
-    name: "zensical-scss-dev",
+    name: "vizen-scss-dev",
     enforce: "pre",
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
@@ -51,11 +51,11 @@ export default defineConfig({
   plugins: [preact(), scssDevPlugin()],
   resolve: {
     alias: {
-      "@zensical/core": resolve(__dirname, "packages/core/src/index.ts"),
-      "@zensical/runtime": resolve(__dirname, "packages/runtime/src/index.ts"),
-      "@zensical/ui": resolve(__dirname, "packages/ui/src/index.ts"),
+      "@vizen/core": resolve(__dirname, "packages/core/src/index.ts"),
+      "@vizen/runtime": resolve(__dirname, "packages/runtime/src/index.ts"),
+      "@vizen/ui": resolve(__dirname, "packages/ui/src/index.ts"),
       // The dev server's HTML references this; resolve it to the browser entry.
-      "/@zensical/entry": resolve(__dirname, "packages/runtime/src/main.ts"),
+      "/@vizen/entry": resolve(__dirname, "packages/runtime/src/main.ts"),
       // Let the runtime import preact from the same copy the dev server bundles.
       react: "preact/compat",
       "react-dom": "preact/compat",
