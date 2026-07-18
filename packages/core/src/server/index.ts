@@ -44,7 +44,7 @@ export async function createDevServer(opts: ServerOptions): Promise<ViteDevServe
     const mdPath = urlToMdPath(url, docsDir);
     if (!mdPath) return next();
     try {
-      const ctx = await renderPageFromMd(config, docsDir, mdPath, url);
+      const ctx = await renderPageFromMd(config, docsDir, mdPath, url, "/@vizen/entry");
       const html = await renderPage(ctx);
       const transformed = await vite.transformIndexHtml(url, html);
       res.setHeader("content-type", "text/html");
@@ -72,9 +72,45 @@ export async function createBuildServer(opts: ServerOptions): Promise<void> {
   const siteDir = join(opts.root, config.site_dir ?? "site");
   const pages = await collectPages(docsDir);
 
+  // Clean + create site dir.
   await mkdir(siteDir, { recursive: true });
+  const assetsDir = join(siteDir, "assets");
+  await mkdir(join(assetsDir, "javascripts"), { recursive: true });
+  await mkdir(join(assetsDir, "stylesheets"), { recursive: true });
+
+  // 1. Bundle the runtime (browser entry) → site/assets/javascripts/bundle.js
+  const entryUrl = "/assets/javascripts/bundle.js";
+  const { build: esbuildBuild } = await import("esbuild");
+  await esbuildBuild({
+    entryPoints: [join(process.cwd(), "packages/runtime/src/main.ts")],
+    bundle: true,
+    format: "esm",
+    target: "es2022",
+    outfile: join(assetsDir, "javascripts", "bundle.js"),
+    jsx: "automatic",
+    jsxImportSource: "preact",
+    define: { "import.meta.hot": "false" },
+    alias: { react: "preact/compat", "react-dom": "preact/compat" },
+  });
+
+  // 2. Compile the ported SCSS → site/assets/stylesheets/main.css
+  const { compileString: sassCompile } = await import("sass");
+  const scssFile = join(process.cwd(), "packages/ui/src/styles/main.scss");
+  const scssSrc = await readFile(scssFile, "utf8");
+  const css = sassCompile(scssSrc, {
+    loadPaths: [
+      join(process.cwd(), "node_modules/material-design-color"),
+      join(process.cwd(), "node_modules/material-shadows"),
+      join(scssFile, ".."),
+    ],
+    silenceDeprecations: ["legacy-js-api", "import", "global-builtin", "color-functions"],
+    quietDeps: true,
+  }).css;
+  await writeFile(join(assetsDir, "stylesheets", "main.css"), css);
+
+  // 3. Render every page to HTML.
   for (const page of pages) {
-    const ctx = await renderPageFromMd(config, docsDir, page.path, page.url);
+    const ctx = await renderPageFromMd(config, docsDir, page.path, page.url, entryUrl);
     const html = await renderPage(ctx);
     const outPath = join(siteDir, page.url, "index.html");
     await mkdir(join(siteDir, page.url), { recursive: true });
@@ -84,7 +120,7 @@ export async function createBuildServer(opts: ServerOptions): Promise<void> {
 
 // --- helpers --------------------------------------------------------------
 
-async function renderPageFromMd(config: Config, docsDir: string, mdPath: string, url: string): Promise<RenderContext> {
+async function renderPageFromMd(config: Config, docsDir: string, mdPath: string, url: string, entryUrl: string): Promise<RenderContext> {
   const src = await readFile(join(docsDir, mdPath), "utf8");
   const content = await renderMarkdown(src, { extensions: config.markdown_extensions, base: url });
   const pages = await collectPages(docsDir);
@@ -101,6 +137,7 @@ async function renderPageFromMd(config: Config, docsDir: string, mdPath: string,
     next: next && next.url ? { title: next.title, url: next.url } : undefined,
     base_url: "/",
     generator: "vizen",
+    entryUrl,
   };
 }
 

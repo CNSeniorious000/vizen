@@ -91,6 +91,7 @@ describe("SSG end-to-end", () => {
       toc,
       base_url: "/",
       generator: "vizen",
+      entryUrl: "/@vizen/entry",
     });
     // Every island anchor must be present — these are the HMR + client-nav targets.
     expect(html).toContain('data-md-component="header"');
