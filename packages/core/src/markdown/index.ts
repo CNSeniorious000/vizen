@@ -27,6 +27,10 @@ export interface TocItem {
 export async function renderMarkdown(src: string, _opts: MarkdownOptions = {}): Promise<MarkdownResult> {
   // Front matter (gray-matter style) — mkdocs convention.
   const { body, meta } = extractFrontMatter(src);
+  // Admonitions are a mkdocs-material signature: `!!! type "title"` followed by an
+  // indented block. We register a marked block extension so the indented body is parsed
+  // as markdown (lists, code, etc.) inside the admonition.
+  marked.use({ extensions: [admonitionExtension] });
   const html = await marked.parse(body, { async: true });
   const toc = extractToc(body);
   const title = (meta.title as string | undefined) ?? firstHeading(body);
@@ -78,3 +82,44 @@ function nestToc(flat: TocItem[]): TocItem[] {
   }
   return root;
 }
+
+// --- admonition extension -------------------------------------------------
+// mkdocs-material syntax:
+//   !!! type "optional title"
+//       indented markdown body
+// Renders to <div class="admonition type"><p class="admonition-title">title</p>body</div>.
+// The body is parsed as markdown so lists/code/links inside admonitions work.
+import type { TokenizerExtension, RendererExtension } from "marked";
+
+interface AdmonitionToken { type: string; raw: string; admType: string; title: string | null; body: string; }
+
+const admonitionExtension: TokenizerExtension & RendererExtension = {
+  name: "admonition",
+  level: "block",
+  start(src: string) { return src.indexOf("!!!"); },
+  tokenizer(src: string): AdmonitionToken | undefined {
+    // Match: !!! type ["title"]  then indented lines (4+ spaces or tab).
+    const m = /^!!! *([\w-]+)(?: +"([^"]*)")? *\n((?:    |\t).*\n?)+/.exec(src);
+    if (!m) return undefined;
+    const raw = m[0];
+    const admType = m[1];
+    const title = m[2] ?? null;
+    // Dedent the body (strip leading 4 spaces / 1 tab) so marked parses it as normal md.
+    const body = m[0]
+      .slice(m[0].indexOf("\n") + 1)
+      .split("\n")
+      .map((line) => line.replace(/^    |\t/, ""))
+      .join("\n");
+    return { type: "admonition", raw, admType, title, body };
+  },
+  renderer(token): string {
+    const t = token as unknown as AdmonitionToken;
+    // Synchronously render the body — admonitions are small and we're already in the
+    // marked pipeline. marked.parse with async:false returns a string.
+    const inner = marked.parse(t.body, { async: false }) as string;
+    const titleHtml = t.title
+      ? `<p class="admonition-title">${t.title}</p>`
+      : "";
+    return `<div class="admonition ${t.admType}">${titleHtml}${inner}</div>`;
+  },
+};
