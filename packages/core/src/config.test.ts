@@ -1,7 +1,39 @@
 import { describe, it, expect } from "vitest";
-import { normalize } from "./config/index.ts";
+import { join } from "node:path";
+import { loadConfig, normalize } from "./config/index.ts";
 
-// Config normalization edge cases: defaults, missing fields, theme variants, feature flags.
+const FIXTURE = join(import.meta.dirname, "__fixtures__");
+
+describe("zensical.toml (native format)", () => {
+  it("loads a zensical.toml config", async () => {
+    const config = await loadConfig(join(FIXTURE, "zensical.toml"));
+    expect(config.site_name).toBe("Zensical TOML Fixture");
+    expect(config.site_description).toBe("A fixture using the native zensical.toml format");
+    expect(config.theme.variant).toBe("modern");
+    expect(config.theme.features).toContain("navigation.instant");
+  });
+
+  it("parses TOML [[nav]] table arrays into the same NavItem shape as YAML", async () => {
+    const config = await loadConfig(join(FIXTURE, "zensical.toml"));
+    expect(config.nav).toBeDefined();
+    // Home: titled page { Home: "index.md" }
+    expect(config.nav![0]).toEqual({ Home: "index.md" });
+    // Getting Started: section { "Getting Started": [children] }
+    const section = config.nav![1] as { "Getting Started": unknown[] };
+    expect(section["Getting Started"]).toHaveLength(2);
+    expect(section["Getting Started"][0]).toEqual({ Overview: "getting-started/index.md" });
+    expect(section["Getting Started"][1]).toEqual({ Installation: "getting-started/installation.md" });
+  });
+
+  it("zensical.toml and mkdocs.yml produce equivalent configs", async () => {
+    const toml = await loadConfig(join(FIXTURE, "zensical.toml"));
+    const yml = await loadConfig(join(FIXTURE, "mkdocs.yml"));
+    // Same structure, different site_name (fixtures differ intentionally) — compare nav.
+    expect(JSON.stringify(toml.nav)).toBe(JSON.stringify(yml.nav));
+    expect(toml.theme.features).toEqual(yml.theme.features);
+    expect(toml.theme.variant).toBe(yml.theme.variant);
+  });
+});
 
 describe("config normalization", () => {
   it("applies defaults for missing fields", () => {

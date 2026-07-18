@@ -1,0 +1,31 @@
+# zensical.toml — the native config format for zensical-vite.
+# Equivalent to mkdocs.yml but in TOML. Run `zensical serve` in a directory with this
+# file (or mkdocs.yml) and it'll be picked up automatically.
+
+site_name = "Zensical TOML Fixture"
+site_description = "A fixture using the native zensical.toml format"
+docs_dir = "docs"
+
+[theme]
+name = "material"
+variant = "modern"
+features = [
+  "navigation.instant",
+  "navigation.tabs",
+]
+
+# Nav is a table array. Each entry is a page (title + url) or a section (title + children).
+[[nav]]
+title = "Home"
+url = "index.md"
+
+[[nav]]
+title = "Getting Started"
+
+  [[nav.children]]
+  title = "Overview"
+  url = "getting-started/index.md"
+
+  [[nav.children]]
+  title = "Installation"
+  url = "getting-started/installation.md"
