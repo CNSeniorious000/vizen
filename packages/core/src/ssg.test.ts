@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { readFile } from "node:fs/promises";
 import { loadConfig } from "./config/index.ts";
 import { renderMarkdown } from "./markdown/index.ts";
-import { buildNav, buildToc } from "./nav/index.ts";
+import { buildNav, buildToc, prevNext, flattenNav } from "./nav/index.ts";
 import { renderPage } from "./render/index.ts";
 import { collectPages } from "./server/collect.ts";
 
@@ -57,6 +57,23 @@ describe("SSG end-to-end", () => {
     expect(nav[1].active).toBe(true); // Getting Started (ancestor)
     expect(nav[1].children?.[0].active).toBeFalsy(); // Overview
     expect(nav[1].children?.[1].active).toBe(true); // Installation (current)
+  });
+
+  it("computes prev/next for footer navigation", async () => {
+    const config = await loadConfig(join(FIXTURE, "mkdocs.yml"));
+    const pages = await collectPages(join(FIXTURE, "docs"));
+    const nav = buildNav(config, pages);
+    // Flat order: Home, Overview, Installation.
+    const flat = flattenNav(nav);
+    expect(flat.map((n) => n.title)).toEqual(["Home", "Overview", "Installation"]);
+    // On Overview, prev=Home, next=Installation.
+    const onOverview = prevNext(nav, "getting-started/");
+    expect(onOverview.prev?.title).toBe("Home");
+    expect(onOverview.next?.title).toBe("Installation");
+    // On Home (first), no prev.
+    const onHome = prevNext(nav, "");
+    expect(onHome.prev).toBeUndefined();
+    expect(onHome.next?.title).toBe("Overview");
   });
 
   it("renders a page with island anchors", async () => {

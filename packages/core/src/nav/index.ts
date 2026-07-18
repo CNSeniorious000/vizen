@@ -79,3 +79,24 @@ export function buildToc(headings: TocItem[], features: string[] = []): Toc {
   if (features.includes("toc.integrate")) return [];
   return headings;
 }
+
+/** Flatten the nav into an ordered list of leaf pages (depth-first). Used to compute
+ *  prev/next links for the footer. */
+export function flattenNav(nav: Nav): NavNode[] {
+  const out: NavNode[] = [];
+  for (const n of nav) {
+    // A node with a url (even "") is a leaf page; sections (no url) are skipped.
+    if (n.url !== undefined) out.push(n);
+    if (n.children) out.push(...flattenNav(n.children));
+  }
+  return out;
+}
+
+/** Find the previous and next page relative to `currentUrl`, for footer navigation. */
+export function prevNext(nav: Nav, currentUrl: string): { prev?: NavNode; next?: NavNode } {
+  const flat = flattenNav(nav);
+  const current = normalizeUrl(currentUrl);
+  const idx = flat.findIndex((n) => n.url !== undefined && normalizeUrl(n.url) === current);
+  if (idx < 0) return {};
+  return { prev: idx > 0 ? flat[idx - 1] : undefined, next: idx < flat.length - 1 ? flat[idx + 1] : undefined };
+}

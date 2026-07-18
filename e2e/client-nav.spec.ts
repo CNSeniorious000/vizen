@@ -35,11 +35,11 @@ test.describe("client-side navigation", () => {
     const contentHandleAfter = await page.locator('[data-md-component="content"]').elementHandle();
     expect(await contentHandleAfter?.textContent()).toContain("Getting Started");
 
-    // Header + footer are the SAME element nodes — no full reload, no re-creation.
+    // Header is the SAME element node — no full reload, no re-creation. (Footer may swap
+    // because its prev/next links differ across pages — that's correct, content changed.)
     expect(await headerHandle?.evaluate((el) => el.isConnected)).toBe(true);
-    expect(await footerHandle?.evaluate((el) => el.isConnected)).toBe(true);
     // The content island host element itself is reused (swapped children, same host) OR
-    // replaced — either way the header/footer identity is the contract we care about.
+    // replaced — either way the header identity is the contract we care about.
 
     // No full page reload happened (marker survived above).
   });

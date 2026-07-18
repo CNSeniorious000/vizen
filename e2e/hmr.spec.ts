@@ -11,11 +11,12 @@ const MAIN_TS = join(process.cwd(), "packages/runtime/src/main.ts");
 
 async function patchFooter(text: string) {
   const src = await readFile(MAIN_TS, "utf8");
-  // The footer renderer renders site_name into .md-footer__title. Swap in a marker we
-  // can assert, by replacing the footer renderer's title expression.
+  // Replace the footer renderer (between the START/END markers) with one that emits a
+  // fixed marker in .md-footer-meta__inner, so we can assert the hot update took effect.
+  const replacement = `runtime.hmr?.register("footer", () => h("footer", { class: "md-footer", "data-md-component": "footer" }, h("div", { class: "md-footer-meta md-typeset" }, h("div", { class: "md-footer-meta__inner md-grid" }, ${JSON.stringify(text)}))));`;
   const next = src.replace(
-    /runtime\.hmr\?\.register\("footer"[\s\S]*?\);\s*\}\);/,
-    `runtime.hmr?.register("footer", (props) => { const p = props as { site_name?: string }; return h("footer", { class: "md-footer" }, h("div", { class: "md-footer__title" }, ${JSON.stringify(text)})); });`
+    /\/\/ FOOTER-RENDERER-START[\s\S]*?\/\/ FOOTER-RENDERER-END/,
+    `// FOOTER-RENDERER-START\n${replacement}\n// FOOTER-RENDERER-END`
   );
   await writeFile(MAIN_TS, next);
 }
@@ -24,7 +25,7 @@ test.describe("HMR", () => {
   test("changing a renderer hot-updates only that island", async ({ page }: { page: Page }) => {
     await page.goto("/");
     // Wait for the runtime to hydrate.
-    await expect(page.locator('[data-md-component="footer"] .md-footer__title')).toHaveText("Zensical Fixture");
+    await expect(page.locator('[data-md-component="footer"] .md-footer-meta__inner')).toHaveText("Zensical Fixture");
 
     // Mark the header node so we can prove it survives the hot update (same element).
     await page.evaluate(() => {
@@ -37,7 +38,7 @@ test.describe("HMR", () => {
     // Patch the footer renderer and let Vite push the hot update.
     await patchFooter("HMR Updated Footer");
     // Give Vite's HMR a moment to compile + push + the runtime to re-render.
-    await expect(page.locator('[data-md-component="footer"] .md-footer__title')).toHaveText("HMR Updated Footer", { timeout: 10_000 });
+    await expect(page.locator('[data-md-component="footer"] .md-footer-meta__inner')).toHaveText("HMR Updated Footer", { timeout: 10_000 });
 
     // The header island kept its DOM identity (marker survived) — HMR didn't touch it.
     const headerMarker = await page.evaluate(() => document.querySelector('[data-md-component="header"]')?.getAttribute("data-hmr-marker"));
@@ -48,14 +49,14 @@ test.describe("HMR", () => {
     expect(jsMarker).toBe(1);
   });
 
-  // Restore the source after the suite so the working tree is clean.
+  // Restore the source after the suite so the working tree is clean. Using git restore is
+  // more robust than regex-matching the renderer back, since the renderer may span lines.
   test.afterAll(async () => {
-    // Re-read and normalize: replace any patched footer renderer with the original title.
-    const src = await readFile(MAIN_TS, "utf8");
-    const restored = src.replace(
-      /runtime\.hmr\?\.register\("footer"[\s\S]*?\);\s*\}\);/,
-      `runtime.hmr?.register("footer", (props) => { const p = props as { site_name?: string }; return h("footer", { class: "md-footer" }, h("div", { class: "md-footer__title" }, p.site_name ?? "")); });`
-    );
-    await writeFile(MAIN_TS, restored);
+    const { execSync } = await import("node:child_process");
+    try {
+      execSync("git checkout -- packages/runtime/src/main.ts", { stdio: "ignore" });
+    } catch {
+      // Not in git or file unchanged — nothing to restore.
+    }
   });
 });

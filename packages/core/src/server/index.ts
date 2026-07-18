@@ -12,7 +12,7 @@ import { createServer as createViteServer, type ViteDevServer, type InlineConfig
 import { createServer as createHttpServer } from "node:http";
 import { loadConfig, type Config } from "../config/index.ts";
 import { renderMarkdown } from "../markdown/index.ts";
-import { buildNav, buildToc } from "../nav/index.ts";
+import { buildNav, buildToc, prevNext } from "../nav/index.ts";
 import { renderPage, type RenderContext } from "../render/index.ts";
 import { collectPages } from "./collect.ts";
 import { join } from "node:path";
@@ -90,12 +90,15 @@ async function renderPageFromMd(config: Config, docsDir: string, mdPath: string,
   const pages = await collectPages(docsDir);
   const nav = buildNav(config, pages, url);
   const toc = buildToc(content.toc, config.theme.features ?? []);
+  const { prev, next } = prevNext(buildNav(config, pages), url);
   return {
     config,
     page: { url, title: content.title ?? basename(mdPath), meta: content.meta as never, canonical_url: undefined },
     content,
     nav,
     toc,
+    prev: prev && prev.url ? { title: prev.title, url: prev.url } : undefined,
+    next: next && next.url ? { title: next.title, url: next.url } : undefined,
     base_url: "/",
     generator: "zensical-vite",
   };
