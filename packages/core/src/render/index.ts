@@ -53,7 +53,7 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
           </div>
         </div>
       </main>
-      ${island("footer", { siteName: config.site_name, prev: ctx.prev, next: ctx.next })}
+      <div data-md-component="footer">${island("footer", { siteName: config.site_name, prev: ctx.prev, next: ctx.next })}</div>
     </div>
 
     <script id="__config" type="application/json">${JSON.stringify({ base: ctx.base_url, features })}</script>
@@ -146,7 +146,7 @@ function renderFooter(p: Record<string, unknown>): string {
   const next = p.next as { title: string; url: string } | undefined;
   const prevLink = prev ? `<a href="${esc(normalizeNavUrl(prev.url))}" class="md-footer__link md-footer__link--prev" rel="prev"><div class="md-footer__title"><span class="md-footer__direction">Previous</span>${esc(prev.title)}</div></a>` : "";
   const nextLink = next ? `<a href="${esc(normalizeNavUrl(next.url))}" class="md-footer__link md-footer__link--next" rel="next"><div class="md-footer__title"><span class="md-footer__direction">Next</span>${esc(next.title)}</div></a>` : "";
-  return `<footer class="md-footer" data-md-component="footer">
+  return `<footer class="md-footer">
   <div class="md-footer-meta md-typeset"><div class="md-footer-meta__inner md-grid">${esc(siteName)}</div></div>
   <div class="md-footer__inner md-grid">${prevLink}${nextLink}</div>
 </footer>`;
