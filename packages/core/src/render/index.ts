@@ -12,6 +12,8 @@ export interface RenderContext {
   content: MarkdownResult;
   nav: Nav;
   toc: Toc;
+  prev?: { title: string; url: string };
+  next?: { title: string; url: string };
   base_url: string;
   generator: string;
 }
@@ -51,7 +53,7 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
           </div>
         </div>
       </main>
-      <div data-md-component="footer">${island("footer", { site_name: config.site_name })}</div>
+      ${island("footer", { siteName: config.site_name, prev: ctx.prev, next: ctx.next })}
     </div>
 
     <script id="__config" type="application/json">${JSON.stringify({ base: ctx.base_url, features })}</script>
@@ -90,7 +92,7 @@ function renderIsland(name: string, props: unknown): string {
   const p = props as Record<string, unknown>;
   switch (name) {
     case "header": return renderHeader(p);
-    case "footer": return `<footer class="md-footer"><div class="md-footer__title">${esc(String(p.site_name ?? ""))}</div></footer>`;
+    case "footer": return renderFooter(p);
     case "content": return `${p.html ?? ""}`;
     case "nav": return renderNav(p.nav as Nav, p.page as string);
     case "toc": return renderToc(p.toc as Toc);
@@ -134,6 +136,20 @@ function renderHeader(p: Record<string, unknown>): string {
     ${searchEnabled ? `<label class="md-header__button md-icon" for="__search" aria-label="Search">${icon("material/magnify")}</label>` : ""}
   </nav>
 </header>`;
+}
+
+/** Render the footer island — prev/next page links + site name. Mirrors
+ *  zensical/ui src/partials/footer.html. */
+function renderFooter(p: Record<string, unknown>): string {
+  const siteName = String(p.siteName ?? "");
+  const prev = p.prev as { title: string; url: string } | undefined;
+  const next = p.next as { title: string; url: string } | undefined;
+  const prevLink = prev ? `<a href="${esc(normalizeNavUrl(prev.url))}" class="md-footer__link md-footer__link--prev" rel="prev"><div class="md-footer__title"><span class="md-footer__direction">Previous</span>${esc(prev.title)}</div></a>` : "";
+  const nextLink = next ? `<a href="${esc(normalizeNavUrl(next.url))}" class="md-footer__link md-footer__link--next" rel="next"><div class="md-footer__title"><span class="md-footer__direction">Next</span>${esc(next.title)}</div></a>` : "";
+  return `<footer class="md-footer" data-md-component="footer">
+  <div class="md-footer-meta md-typeset"><div class="md-footer-meta__inner md-grid">${esc(siteName)}</div></div>
+  <div class="md-footer__inner md-grid">${prevLink}${nextLink}</div>
+</footer>`;
 }
 
 function renderNav(nav: Nav, _page: string): string {

@@ -27,7 +27,16 @@ runtime.hmr?.register("content", (props) => {
   return h("article", { class: "md-content__inner md-typeset", dangerouslySetInnerHTML: { __html: p.html ?? "" } });
 });
 
-runtime.hmr?.register("footer", (props) => { const p = props as { site_name?: string }; return h("footer", { class: "md-footer" }, h("div", { class: "md-footer__title" }, p.site_name ?? "")); });
+// FOOTER-RENDERER-START
+runtime.hmr?.register("footer", (props) => {
+  const p = props as { siteName?: string; prev?: { title: string; url: string }; next?: { title: string; url: string } };
+  const prev = p.prev ? h("a", { href: p.prev.url, class: "md-footer__link md-footer__link--prev", rel: "prev" }, h("div", { class: "md-footer__title" }, h("span", { class: "md-footer__direction" }, "Previous"), p.prev.title)) : null;
+  const next = p.next ? h("a", { href: p.next.url, class: "md-footer__link md-footer__link--next", rel: "next" }, h("div", { class: "md-footer__title" }, h("span", { class: "md-footer__direction" }, "Next"), p.next.title)) : null;
+  return h("footer", { class: "md-footer", "data-md-component": "footer" },
+    h("div", { class: "md-footer-meta md-typeset" }, h("div", { class: "md-footer-meta__inner md-grid" }, p.siteName ?? "")),
+    h("div", { class: "md-footer__inner md-grid" }, prev, next));
+});
+// FOOTER-RENDERER-END
 
 runtime.hmr?.register("nav", (props) => {
   const p = props as { nav?: { title: string; url?: string; children?: unknown[] }[] };
