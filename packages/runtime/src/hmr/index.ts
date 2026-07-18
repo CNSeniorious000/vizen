@@ -13,7 +13,8 @@
 import { render as preactRender, type VNode } from "preact";
 import { ISLAND_ATTR, islandId } from "../island.ts";
 
-export type IslandRender = (props: unknown) => VNode | null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type IslandRender = (props: unknown) => VNode<any> | null;
 
 export interface HmrUpdate {
   /** The island name (`data-md-component` value) whose source changed. */

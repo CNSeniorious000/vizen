@@ -1,0 +1,14 @@
+site_name: Zensical Fixture
+site_description: A fixture docs site for testing the SSG.
+docs_dir: docs
+theme:
+  name: material
+  variant: modern
+  features:
+    - navigation.instant
+    - navigation.tabs
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Overview: getting-started/index.md
+      - Installation: getting-started/installation.md
