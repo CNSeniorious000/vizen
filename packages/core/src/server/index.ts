@@ -111,13 +111,15 @@ function urlToMdPath(url: string, _docsDir: string): string | null {
 }
 
 async function findConfig(root: string): Promise<string> {
-  for (const name of ["zensical.yml", "mkdocs.yml", "mkdocs.yaml"]) {
+  // zensical.toml is the preferred native format; fall back to mkdocs.yml for
+  // drop-in compatibility with existing Material for MkDocs projects.
+  for (const name of ["zensical.toml", "mkdocs.yml", "mkdocs.yaml", "zensical.yml"]) {
     try {
       await stat(join(root, name));
       return join(root, name);
     } catch { /* try next */ }
   }
-  return join(root, "mkdocs.yml");
+  return join(root, "zensical.toml");
 }
 
 function basename(p: string): string {

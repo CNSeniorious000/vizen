@@ -1,7 +1,9 @@
-// Config loading — mkdocs.yml-compatible (we accept mkdocs.yml OR zensical.yml).
-// TS port of zensical/python/zensical/config.py + mkdocs config schema.
+// Config loading — supports BOTH mkdocs.yml (YAML) and zensical.toml (TOML).
+// zensical.toml is the preferred native format; mkdocs.yml is supported for
+// drop-in compatibility with existing Material for MkDocs projects.
 
 import { parse as parseYaml } from "yaml";
+import { parse as parseToml } from "smol-toml";
 import { readFile } from "node:fs/promises";
 
 export interface Config {
@@ -55,8 +57,31 @@ export interface PageMeta {
 
 export async function loadConfig(path: string): Promise<Config> {
   const file = await readFile(path, "utf8");
-  const raw = parseYaml(file) as Partial<Config>;
-  return normalize(raw);
+  const isToml = path.endsWith(".toml");
+  const raw = isToml ? parseToml(file) as unknown as Partial<Config> : parseYaml(file) as Partial<Config>;
+  // TOML nav uses [[nav]] table arrays with {title, url?, children?} — convert to the
+  // NavItem shape that buildNav expects (same as YAML's titled-page form).
+  const normalized = isToml ? { ...raw, nav: tomlNavToNav(raw.nav) } : raw;
+  return normalize(normalized);
+}
+
+/** Convert a TOML [[nav]] table array into NavItem[]. TOML has no inline nested arrays
+ *  of mixed types, so nav is expressed as:
+ *    [[nav]] title = "Home" url = "index.md"
+ *    [[nav]] title = "Section"
+ *      [[nav.children]] title = "Child" url = "child.md"
+ *  Each entry: { title, url?, children?: same[] }. We map titled entries to
+ *  { [title]: url | children[] } so buildNav's toNode handles them uniformly. */
+function tomlNavToNav(nav: unknown): NavItem[] | undefined {
+  if (!Array.isArray(nav)) return nav as NavItem[] | undefined;
+  return nav.map((entry) => {
+    const e = entry as { title: string; url?: string; children?: unknown[] };
+    if (Array.isArray(e.children) && e.children.length > 0) {
+      return { [e.title]: tomlNavToNav(e.children) } as NavItem;
+    }
+    // Titled page: { Title: "path" }. url may be omitted for a pure section header.
+    return { [e.title]: e.url ?? "" } as NavItem;
+  });
 }
 
 export function normalize(raw: Partial<Config>): Config {
