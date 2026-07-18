@@ -72,7 +72,7 @@ describe("SSG end-to-end", () => {
     // The rendered markdown body is inside the content island.
     expect(html).toContain("Welcome");
     expect(html).toContain("getting-started/");
-    // The runtime script is injected.
-    expect(html).toContain("/@zensical/runtime");
+    // The runtime entry script is injected.
+    expect(html).toContain("/@zensical/entry");
   });
 });

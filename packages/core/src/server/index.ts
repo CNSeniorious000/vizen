@@ -9,6 +9,7 @@
 // client runtime bundle (runtime + ui) into site_dir/assets.
 
 import { createServer as createViteServer, type ViteDevServer, type InlineConfig } from "vite";
+import { createServer as createHttpServer } from "node:http";
 import { loadConfig, type Config } from "../config/index.ts";
 import { renderMarkdown } from "../markdown/index.ts";
 import { buildNav, buildToc } from "../nav/index.ts";
@@ -24,15 +25,15 @@ export interface ServerOptions {
 }
 
 export async function createDevServer(opts: ServerOptions): Promise<ViteDevServer> {
-  const configPath = opts.configPath ?? findConfig(opts.root);
+  const configPath = opts.configPath ?? await findConfig(opts.root);
   const config = await loadConfig(configPath);
   const docsDir = join(opts.root, config.docs_dir);
 
   const vite = await createViteServer({
     root: opts.root,
-    server: { middlewareMode: true, port: opts.port ?? 5183 },
+    configFile: join(process.cwd(), "vite.config.ts"),
+    server: { middlewareMode: true },
     appType: "custom",
-    optimizeDeps: { include: ["preact"] },
   } satisfies InlineConfig);
 
   // SSR middleware: render the requested page, let Vite transform the HTML so the runtime
@@ -42,18 +43,30 @@ export async function createDevServer(opts: ServerOptions): Promise<ViteDevServe
     if (url.startsWith("/@") || url.startsWith("/assets/") || url.startsWith("/node_modules/")) return next();
     const mdPath = urlToMdPath(url, docsDir);
     if (!mdPath) return next();
-    const ctx = await renderPageFromMd(config, docsDir, mdPath, url);
-    const html = await renderPage(ctx);
-    const transformed = await vite.transformIndexHtml(url, html);
-    res.setHeader("content-type", "text/html");
-    res.end(transformed);
+    try {
+      const ctx = await renderPageFromMd(config, docsDir, mdPath, url);
+      const html = await renderPage(ctx);
+      const transformed = await vite.transformIndexHtml(url, html);
+      res.setHeader("content-type", "text/html");
+      res.end(transformed);
+    } catch (err) {
+      vite.ssrFixStacktrace(err as Error);
+      res.statusCode = 500;
+      res.end(String(err));
+    }
   });
 
+  // middlewareMode doesn't listen on its own — wrap Vite's middlewares in an http server.
+  const port = opts.port ?? 5183;
+  const http = createHttpServer(vite.middlewares);
+  await new Promise<void>((resolve) => http.listen(port, resolve));
+  // Expose the http server so the CLI can report the bound port + close it.
+  (vite as ViteDevServer & { httpServer: typeof http }).httpServer = http;
   return vite;
 }
 
 export async function createBuildServer(opts: ServerOptions): Promise<void> {
-  const configPath = opts.configPath ?? findConfig(opts.root);
+  const configPath = opts.configPath ?? await findConfig(opts.root);
   const config = await loadConfig(configPath);
   const docsDir = join(opts.root, config.docs_dir);
   const siteDir = join(opts.root, config.site_dir ?? "site");
@@ -94,10 +107,10 @@ function urlToMdPath(url: string, _docsDir: string): string | null {
   return `${clean}/index.md`.replace(/^index\.md$/, "index.md");
 }
 
-function findConfig(root: string): string {
+async function findConfig(root: string): Promise<string> {
   for (const name of ["zensical.yml", "mkdocs.yml", "mkdocs.yaml"]) {
     try {
-      stat(join(root, name));
+      await stat(join(root, name));
       return join(root, name);
     } catch { /* try next */ }
   }

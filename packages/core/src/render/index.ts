@@ -55,7 +55,7 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
     </div>
 
     <script id="__config" type="application/json">${JSON.stringify({ base: ctx.base_url, features })}</script>
-    <script type="module" src="/@zensical/runtime"></script>
+    <script type="module" src="/@zensical/entry"></script>
   </body>
 </html>`;
 }
