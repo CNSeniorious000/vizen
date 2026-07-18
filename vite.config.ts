@@ -34,6 +34,8 @@ function scssDevPlugin(): Plugin {
               resolve(__dirname, "node_modules/material-shadows"),
               resolve(file, ".."),
             ],
+            silenceDeprecations: ["legacy-js-api", "import", "global-builtin", "color-functions"],
+            quietDeps: true,
           });
           res.setHeader("content-type", "text/css; charset=utf-8");
           res.end(result.css);
