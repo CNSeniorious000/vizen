@@ -6,6 +6,7 @@
 
 import type { Config, PageMeta, PaletteConfig } from "../config/index.ts";
 import type { MarkdownResult } from "../markdown/index.ts";
+import { readSvg } from "../server/scss.ts";
 import type { Nav, NavNode, Toc } from "../nav/index.ts";
 
 export interface RenderContext {
@@ -29,6 +30,8 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
   const description = page.meta.description ?? config.site_description;
   const palette = resolvePalette(config.theme.palette);
   const font = config.theme.font ?? { text: "Inter", code: "JetBrains Mono" };
+  // Preload any nav-item icons (front-matter `icon`) so renderNavItem can inline them.
+  await preloadNavIcons(ctx.nav);
 
   return `<!doctype html>
 <html lang="en" class="no-js">
@@ -151,6 +154,37 @@ const ICONS: Record<string, string> = {
 
 function icon(name: string): string {
   return ICONS[name] ?? "";
+}
+
+// Nav-item icons: a page's front-matter `icon` (e.g. "lucide/smile") is inlined as SVG
+// before the link title, mirroring zensical/ui's nav-item.html. SVGs load async from
+// lucide-static, so we preload them once per render and cache by name.
+const navIconCache = new Map<string, string>();
+
+/** Walk the nav tree and preload every referenced icon SVG. */
+async function preloadNavIcons(nav: Nav): Promise<void> {
+  const names = new Set<string>();
+  collectNavIcons(nav, names);
+  await Promise.all([...names].map(async (name) => {
+    if (navIconCache.has(name)) return;
+    // readSvg resolves lucide-static/icons/<name>.svg; strip the `lucide/` prefix.
+    const file = name.startsWith("lucide/") ? name.slice("lucide/".length) : name;
+    const svg = await readSvg(file);
+    navIconCache.set(name, svg);
+  }));
+}
+
+function collectNavIcons(nav: Nav, out: Set<string>): void {
+  for (const n of nav) {
+    if (n.icon) out.add(n.icon);
+    if (n.children) collectNavIcons(n.children, out);
+  }
+}
+
+/** Return the cached SVG for a nav icon, or "" if unset/missing. */
+function navIcon(name: string | undefined): string {
+  if (!name) return "";
+  return navIconCache.get(name) ?? "";
 }
 
 /** Search is on by default (a docs site without search is broken UX). Opt out with
@@ -317,11 +351,12 @@ function renderNav(nav: Nav, siteName: string, features: string[], toc: Toc): st
 
 function renderNavItem(n: NavNode, path: string, level: number, features: string[], toc: Toc): string {
   const activeCls = n.active ? " md-nav__item--active" : "";
+  const ic = navIcon(n.icon);
   // Section: has children → checkbox toggle + nested list (mirrors nav-item.html's
   // `nav_item.children` branch). Active sections render checked so they're expanded.
   if (n.children) {
     const checked = n.active ? " checked" : "";
-    const head = `<label class="md-nav__link" for="${path}" id="${path}_label" tabindex="0"><span class="md-ellipsis">${esc(n.title)}</span><span class="md-nav__icon md-icon"></span></label>`;
+    const head = `<label class="md-nav__link" for="${path}" id="${path}_label" tabindex="0">${ic}<span class="md-ellipsis">${esc(n.title)}</span><span class="md-nav__icon md-icon"></span></label>`;
     const children = n.children.map((c, i) => renderNavItem(c, `${path}_${i + 1}`, level + 1, features, toc)).join("");
     return `<li class="md-nav__item md-nav__item--nested${activeCls}"><input class="md-nav__toggle md-toggle" type="checkbox" id="${path}"${checked} />${head}<nav class="md-nav" data-md-level="${level}" aria-labelledby="${path}_label" aria-expanded="${n.active ? "true" : "false"}"><label class="md-nav__title" for="${path}"><span class="md-nav__icon md-icon"></span>${esc(n.title)}</label><ul class="md-nav__list">${children}</ul></nav></li>`;
   }
@@ -330,10 +365,10 @@ function renderNavItem(n: NavNode, path: string, level: number, features: string
   // it scrolls with the sidebar on mobile).
   if (n.active && toc.length) {
     const tocNav = renderToc(toc);
-    return `<li class="md-nav__item${activeCls}"><label class="md-nav__link md-nav__link--active" for="__toc"><span class="md-ellipsis">${esc(n.title)}</span><span class="md-nav__icon md-icon"></span></label><a href="${esc(normalizeUrl(n.url ?? ""))}" class="md-nav__link md-nav__link--active"><span class="md-ellipsis">${esc(n.title)}</span></a>${tocNav}</li>`;
+    return `<li class="md-nav__item${activeCls}"><label class="md-nav__link md-nav__link--active" for="__toc">${ic}<span class="md-ellipsis">${esc(n.title)}</span><span class="md-nav__icon md-icon"></span></label><a href="${esc(normalizeUrl(n.url ?? ""))}" class="md-nav__link md-nav__link--active">${ic}<span class="md-ellipsis">${esc(n.title)}</span></a>${tocNav}</li>`;
   }
   const linkCls = n.active ? "md-nav__link md-nav__link--active" : "md-nav__link";
-  return `<li class="md-nav__item${activeCls}"><a href="${esc(normalizeUrl(n.url ?? ""))}" class="${linkCls}"><span class="md-ellipsis">${esc(n.title)}</span></a></li>`;
+  return `<li class="md-nav__item${activeCls}"><a href="${esc(normalizeUrl(n.url ?? ""))}" class="${linkCls}">${ic}<span class="md-ellipsis">${esc(n.title)}</span></a></li>`;
 }
 
 /** The secondary sidebar (toc) wrapper — mirrors base.html's toc sidebar branch: a

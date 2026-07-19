@@ -1,3 +1,6 @@
+---
+icon: lucide/route
+---
 # Client-side Navigation
 
 vizen's client-side navigation is **on by default** — no opt-in flag, no per-link annotation. Clicking an in-app link loads only the diff and renders it. SPA + SSR by default, never a full MPA reload.

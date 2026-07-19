@@ -1,3 +1,6 @@
+---
+icon: lucide/home
+---
 # vizen
 
 A modern static site generator with **perfect HMR** and **client-side navigation** — a TypeScript port of [zensical](https://github.com/zensical/zensical) (by the Material for MkDocs team), rebuilt on Vite 8 + Bun.

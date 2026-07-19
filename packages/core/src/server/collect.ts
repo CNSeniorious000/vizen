@@ -4,6 +4,7 @@
 
 import { join, relative, sep } from "node:path";
 import { readdir, readFile } from "node:fs/promises";
+import { parse as parseYaml } from "yaml";
 import type { PageRef } from "../nav/index.ts";
 
 export async function collectPages(docsDir: string): Promise<PageRef[]> {
@@ -17,8 +18,8 @@ export async function collectPages(docsDir: string): Promise<PageRef[]> {
         const rel = relative(docsDir, full).split(sep).join("/");
         const url = rel.replace(/(index)?\.md$/, "") || "";
         const src = await readFile(full, "utf8");
-        const title = src.match(/^#\s+(.+)$/m)?.[1] ?? rel;
-        out.push({ path: rel, url: url || "", title });
+        const { title, icon } = extractMeta(src, rel);
+        out.push({ path: rel, url: url || "", title, icon });
       }
     }
   }
@@ -27,4 +28,14 @@ export async function collectPages(docsDir: string): Promise<PageRef[]> {
   // are deterministic.
   out.sort((a, b) => a.path.localeCompare(b.path));
   return out;
+}
+
+/** Pull title + icon from front matter (gray-matter style). Title falls back to the
+ *  first H1, then the path. Icon is the front-matter `icon` field (e.g. "lucide/smile"). */
+function extractMeta(src: string, fallbackTitle: string): { title: string; icon?: string } {
+  const m = src.match(/^---\n([\s\S]*?)\n---\n?/);
+  const meta = m ? (parseYaml(m[1]) ?? {}) as Record<string, unknown> : {};
+  const title = (meta.title as string | undefined) ?? src.match(/^#\s+(.+)$/m)?.[1] ?? fallbackTitle;
+  const icon = meta.icon as string | undefined;
+  return { title, icon };
 }

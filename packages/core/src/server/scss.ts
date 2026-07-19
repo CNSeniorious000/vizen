@@ -62,3 +62,16 @@ export async function compileScss(scssSrc: string, opts: CompileScssOptions): Pr
   if (!iconsDir) return compiled;
   return resolveSvgLoad(compiled, iconsDir);
 }
+
+/** Read an SVG file from lucide-static/icons by name (no extension). Used to inline nav
+ *  item icons (front-matter `icon: lucide/smile`) at SSR time. Returns "" if missing. */
+export async function readSvg(name: string): Promise<string> {
+  const dir = resolveLucideIconsDir();
+  if (!dir) return "";
+  const file = join(dir, `${name}.svg`);
+  try {
+    return await readFile(file, "utf8");
+  } catch {
+    return "";
+  }
+}

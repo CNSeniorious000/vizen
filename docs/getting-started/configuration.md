@@ -1,3 +1,6 @@
+---
+icon: lucide/settings
+---
 # Configuration
 
 `vizen serve` / `vizen build` auto-discovers config in the project root, preferring **`vizen.toml`** (the native format) and falling back to **`mkdocs.yml`** / `mkdocs.yaml` for drop-in compatibility with existing Material for MkDocs projects.

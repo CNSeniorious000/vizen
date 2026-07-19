@@ -4,7 +4,7 @@
 
 import { Marked } from "marked";
 import { markedHighlight } from "marked-highlight";
-import hljs from "highlight.js";
+import { getSingletonHighlighter, type Highlighter } from "shiki";
 import { parse as parseYaml } from "yaml";
 
 export interface MarkdownOptions {
@@ -32,6 +32,9 @@ export interface TocItem {
 export async function renderMarkdown(src: string, _opts: MarkdownOptions = {}): Promise<MarkdownResult> {
   // Front matter (gray-matter style) — mkdocs convention.
   const { body, meta } = extractFrontMatter(src);
+  // Shiki grammars load async; ensure they're ready before parsing so the sync highlight()
+  // in the marked pipeline has a highlighter to call.
+  await ensureHighlighter();
   // Footnotes: extract `[^id]: text` definitions, replace `[^id]` references with
   // <sup> links, and append the definitions as a footnotes section after parsing.
   const { body: bodyNoFn, footnotes } = extractFootnotes(body);
@@ -218,16 +221,45 @@ function esc(s: string): string {
 }
 
 // A single Marked instance configured once at module load. marked.use() mutates the
-// instance, so calling it per-render would stack duplicate walkTokens (e.g. highlight.js
-// running twice on the same code token → double-escaped output). Defined after the
+// instance, so calling it per-render would stack duplicate walkTokens. Defined after the
 // extension consts so they're in scope; the admonition/details renderers close over `md`
 // so their nested body parsing shares the same extensions + highlighter.
+//
+// Shiki (VS Code grammars) replaces highlight.js for code highlighting — it produces
+// inline-styled spans that match zensical/ui's material palette via the _hljs.scss token
+// mapping. The highlighter is async to init (loads grammars), so we preload common
+// languages once and await it in renderMarkdown; the sync highlight() then runs against
+// the ready highlighter.
+const SHIKI_LANGS = ["typescript", "javascript", "python", "bash", "shell", "toml", "yaml", "json", "markdown", "html", "css", "tsx", "jsx", "diff"] as const;
+// Common aliases → canonical shiki language id. Fenced blocks use short names (```ts) but
+// shiki's grammar is registered under the full name (typescript).
+const SHIKI_ALIAS: Record<string, string> = {
+  ts: "typescript", js: "javascript", py: "python", sh: "bash", shell: "bash",
+  yml: "yaml", md: "markdown", text: "text", plaintext: "text",
+};
+let highlighter: Highlighter | null = null;
+async function ensureHighlighter(): Promise<Highlighter> {
+  if (!highlighter) {
+    highlighter = await getSingletonHighlighter({ langs: [...SHIKI_LANGS], themes: ["github-light"] });
+  }
+  return highlighter;
+}
+
 const md = new Marked();
 md.use(markedHighlight({
   langPrefix: "language-",
   highlight(code, lang) {
-    const language = hljs.getLanguage(lang) ? lang : "plaintext";
-    return hljs.highlight(code, { language }).value;
+    if (!highlighter) return code;
+    const language = SHIKI_ALIAS[lang] ?? ((SHIKI_LANGS as readonly string[]).includes(lang) ? lang : "text");
+    try {
+      // codeToHtml emits <pre class="shiki"><code>...</code></pre>; marked-highlight wraps
+      // the return value in <code>, so extract just the inner spans.
+      const html = highlighter.codeToHtml(code, { lang: language, theme: "github-light" });
+      const inner = html.match(/<code[^>]*>([\s\S]*)<\/code>/)?.[1] ?? code;
+      return inner;
+    } catch {
+      return code;
+    }
   },
 }));
 md.use({

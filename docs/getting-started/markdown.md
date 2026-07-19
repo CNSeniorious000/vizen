@@ -1,3 +1,6 @@
+---
+icon: lucide/markdown
+---
 # Markdown syntax
 
 vizen supports the full zensical (Material for MkDocs) markdown extension set. This page is

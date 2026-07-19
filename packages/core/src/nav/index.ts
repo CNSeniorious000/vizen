@@ -10,6 +10,8 @@ export interface NavNode {
   url?: string;
   children?: NavNode[];
   active?: boolean;
+  /** Icon path (e.g. "lucide/smile") from the page's front-matter `icon` field. */
+  icon?: string;
 }
 
 export type Toc = TocItem[];
@@ -27,6 +29,8 @@ export interface PageRef {
   path: string; // e.g. "getting-started/index.md"
   url: string; // e.g. "getting-started/"
   title: string;
+  /** Front-matter `icon` (e.g. "lucide/smile"), rendered before the nav link title. */
+  icon?: string;
 }
 
 /** Mark the node whose url matches `current` as active, and propagate active up to ancestor
@@ -57,14 +61,14 @@ function toNode(item: NavItem, pages: PageRef[]): NavNode {
   // Bare path: "- index.md"
   if (typeof item === "string") {
     const page = pages.find((p) => p.path === item);
-    return { title: page?.title ?? item, url: page?.url };
+    return { title: page?.title ?? item, url: page?.url, icon: page?.icon };
   }
   // Title-keyed: { "Title": <path | [children]> }
   const [title, value] = Object.entries(item)[0]!;
   // { "Home": "index.md" } — single page with a custom title.
   if (typeof value === "string") {
     const page = pages.find((p) => p.path === value);
-    return { title, url: page?.url };
+    return { title, url: page?.url, icon: page?.icon };
   }
   // { "Section": [children] } — nested section.
   return { title, children: (value as NavItem[]).map((c) => toNode(c, pages)) };

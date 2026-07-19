@@ -1,3 +1,6 @@
+---
+icon: lucide/flame
+---
 # HMR
 
 vizen's HMR is **perfect**: when you change a component, only that spot refreshes in the browser. The rest of the DOM — other islands, scroll position, drawer toggles, focus, in-flight interactions — is preserved bit-for-bit.

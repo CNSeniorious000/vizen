@@ -26,14 +26,13 @@ describe("markdown extensions", () => {
     expect(result.html).toContain('class="admonition warning"');
   });
 
-  it("renders fenced code blocks with language class + highlight.js", async () => {
+  it("renders fenced code blocks with language class + shiki", async () => {
     const src = "```ts\nconst x = 1;\n```\n";
     const result = await renderMarkdown(src);
     expect(result.html).toContain('class="language-ts"');
-    // highlight.js wraps tokens in <span class="hljs-*">; the keyword + number survive.
-    expect(result.html).toContain("hljs-keyword");
+    // shiki wraps tokens in <span style="color:..."> (inline-styled, VS Code grammars).
+    expect(result.html).toContain('style="color:');
     expect(result.html).toContain("const");
-    expect(result.html).toContain("hljs-number");
   });
 
   it("extracts front matter and excludes it from html", async () => {
