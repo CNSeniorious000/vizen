@@ -96,13 +96,15 @@ export async function createBuildServer(opts: ServerOptions): Promise<void> {
   // 2. Compile the ported SCSS → site/assets/stylesheets/{main,palette}.css
   const { compileString: sassCompile } = await import("sass");
   const stylesDir = join(process.cwd(), "packages/ui/src/styles");
+  // silenceDeprecations is typed as DeprecationOrId[]; the string literals are valid ids
+  // but TS can't widen string[] to that union without a cast.
   const sassOpts = {
     loadPaths: [
       join(process.cwd(), "node_modules/material-design-color"),
       join(process.cwd(), "node_modules/material-shadows"),
       stylesDir,
     ],
-    silenceDeprecations: ["legacy-js-api", "import", "global-builtin", "color-functions"],
+    silenceDeprecations: ["legacy-js-api", "import", "global-builtin", "color-functions"] as never[],
     quietDeps: true,
   };
   for (const name of ["main", "palette"]) {

@@ -86,6 +86,11 @@ function tomlNavToNav(nav: unknown): NavItem[] | undefined {
 
 export function normalize(raw: Partial<Config>): Config {
   const docs_dir = raw.docs_dir ?? "docs";
+  const theme: ThemeConfig = { name: "material", variant: "modern", features: [], ...raw.theme };
+  // mkdocs-material defaults to an indigo palette when none is configured — the body's
+  // data-md-color-* attributes + palette.css variables depend on it. Without a default,
+  // the header/links render unstyled (no primary color).
+  if (!theme.palette) theme.palette = { scheme: "default", primary: "indigo", accent: "indigo" };
   return {
     site_name: raw.site_name ?? "My Docs",
     site_url: raw.site_url,
@@ -93,7 +98,7 @@ export function normalize(raw: Partial<Config>): Config {
     site_author: raw.site_author,
     docs_dir,
     site_dir: raw.site_dir ?? "site",
-    theme: { name: "material", variant: "modern", features: [], ...raw.theme },
+    theme,
     nav: raw.nav,
     extra: raw.extra ?? {},
     extra_css: raw.extra_css ?? [],
