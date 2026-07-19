@@ -170,12 +170,17 @@ function renderNavItem(n: NavNode): string {
   return `<li class="md-nav__item${activeCls}"><a class="md-nav__link${n.active ? " md-nav__link--active" : ""}" href="${esc(normalizeNavUrl(n.url ?? ""))}">${esc(n.title)}</a></li>`;
 }
 
-/** Normalize a nav url to match mkdocs conventions: empty → "/", directory pages get a trailing slash. */
+/** Normalize a nav url to an ABSOLUTE path (leading /) so it resolves correctly from any
+ *  page depth. Relative paths like "getting-started/installation" would otherwise resolve
+ *  against the current page's URL (e.g. /getting-started/configuration/ + getting-started/
+ *  installation/ = broken). mkdocs-material does the same via its `| url` filter. */
 function normalizeNavUrl(url: string): string {
   if (url === "") return "/";
-  // Leave absolute urls, fragments, and files with an extension (e.g. "foo.pdf") alone.
-  if (url.startsWith("/") || url.startsWith("#") || /\.[^/]*$/.test(url)) return url;
-  return url.endsWith("/") ? url : `${url}/`;
+  // Leave fragments and full URLs alone.
+  if (url.startsWith("#") || /^https?:\/\//.test(url)) return url;
+  // Ensure leading slash + trailing slash (directory pages).
+  const withSlash = url.endsWith("/") || /\.[^/]*$/.test(url) ? url : `${url}/`;
+  return withSlash.startsWith("/") ? withSlash : `/${withSlash}`;
 }
 
 function renderToc(toc: Toc): string {
