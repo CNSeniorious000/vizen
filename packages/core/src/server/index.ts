@@ -15,6 +15,7 @@ import { renderMarkdown } from "../markdown/index.ts";
 import { buildNav, buildToc, prevNext } from "../nav/index.ts";
 import { renderPage, type RenderContext } from "../render/index.ts";
 import { collectPages } from "./collect.ts";
+import { compileScss } from "./scss.ts";
 import { join } from "node:path";
 import { stat, mkdir, writeFile, readFile } from "node:fs/promises";
 
@@ -100,22 +101,17 @@ export async function createBuildServer(opts: ServerOptions): Promise<void> {
   });
 
   // 2. Compile the ported SCSS → site/assets/stylesheets/{main,palette}.css
-  const { compileString: sassCompile } = await import("sass");
+  // compileScss runs sass then postcss-inline-svg to resolve `svg-load("lucide/...")`
+  // icons (without postcss they'd stay verbatim and every icon renders as a solid rect).
   const stylesDir = join(process.cwd(), "packages/ui/src/styles");
-  // silenceDeprecations is typed as DeprecationOrId[]; the string literals are valid ids
-  // but TS can't widen string[] to that union without a cast.
-  const sassOpts = {
-    loadPaths: [
-      join(process.cwd(), "node_modules/material-design-color"),
-      join(process.cwd(), "node_modules/material-shadows"),
-      stylesDir,
-    ],
-    silenceDeprecations: ["legacy-js-api", "import", "global-builtin", "color-functions"] as never[],
-    quietDeps: true,
-  };
+  const loadPaths = [
+    join(process.cwd(), "node_modules/material-design-color"),
+    join(process.cwd(), "node_modules/material-shadows"),
+    stylesDir,
+  ];
   for (const name of ["main", "palette"]) {
     const scssSrc = await readFile(join(stylesDir, `${name}.scss`), "utf8");
-    const css = sassCompile(scssSrc, sassOpts).css;
+    const css = await compileScss(scssSrc, { loadPaths });
     await writeFile(join(assetsDir, "stylesheets", `${name}.css`), css);
   }
 

@@ -2,7 +2,7 @@ import { defineConfig, type Plugin } from "vite";
 import preact from "@preact/preset-vite";
 import { resolve } from "node:path";
 import { readFile } from "node:fs/promises";
-import { compileString } from "sass";
+import { compileScss } from "./packages/core/src/server/scss.ts";
 
 // Dev server config for vizen itself (used when running `vizen serve` on a
 // docs project). The SSG's dev server (packages/core/src/server) creates a Vite server
@@ -12,7 +12,8 @@ import { compileString } from "sass";
 /** Compile the ported zensical/ui SCSS on demand so the SSR HTML's
  *  `<link href="/assets/stylesheets/main.css">` resolves in dev. We intercept the request
  *  in configureServer (not load) because Vite's CSS pipeline wraps .css load output into a
- *  JS module for HMR — a <link> tag needs raw text/css, which the middleware serves. */
+ *  JS module for HMR — a <link> tag needs raw text/css, which the middleware serves.
+ *  compileScss also resolves `svg-load("lucide/...")` icons to inline data URLs. */
 function scssDevPlugin(): Plugin {
   const routes: Record<string, string> = {
     "/assets/stylesheets/main.css": resolve(__dirname, "packages/ui/src/styles/main.scss"),
@@ -28,17 +29,15 @@ function scssDevPlugin(): Plugin {
         if (!file) return next();
         try {
           const src = await readFile(file, "utf8");
-          const result = compileString(src, {
+          const css = await compileScss(src, {
             loadPaths: [
               resolve(__dirname, "node_modules/material-design-color"),
               resolve(__dirname, "node_modules/material-shadows"),
               resolve(file, ".."),
             ],
-            silenceDeprecations: ["legacy-js-api", "import", "global-builtin", "color-functions"],
-            quietDeps: true,
           });
           res.setHeader("content-type", "text/css; charset=utf-8");
-          res.end(result.css);
+          res.end(css);
         } catch (err) {
           next(err);
         }

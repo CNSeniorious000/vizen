@@ -30,5 +30,5 @@
       "@vizen/ui/*": ["./packages/ui/src/*"]
     }
   },
-  "include": ["packages/*/src/**/*.ts", "packages/*/src/**/*.tsx", "vitest.config.ts"]
+  "include": ["packages/*/src/**/*.ts", "packages/*/src/**/*.tsx", "vitest.config.ts", "types/**/*.d.ts"]
 }

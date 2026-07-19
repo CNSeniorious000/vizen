@@ -13,6 +13,7 @@ import { h, Fragment, type VNode } from "preact";
 import { ISLAND_ATTR } from "./island.ts";
 import { mountSearch } from "./search.ts";
 import { mountClipboard } from "./clipboard.ts";
+import { mountHeaderScroll } from "./header.ts";
 
 const runtime = mount();
 
@@ -171,6 +172,9 @@ mountSearch();
 mountClipboard();
 const contentEl = document.querySelector('[data-md-component="content"]');
 if (contentEl) new MutationObserver(() => mountClipboard()).observe(contentEl, { childList: true, subtree: true });
+
+// Hide the tabs bar on scroll-down, reveal on scroll-up (navigation.tabs behavior).
+mountHeaderScroll();
 
 // Re-export the island attr for consumers that want to query islands.
 export { ISLAND_ATTR };
