@@ -26,11 +26,14 @@ describe("markdown extensions", () => {
     expect(result.html).toContain('class="admonition warning"');
   });
 
-  it("renders fenced code blocks with language class", async () => {
+  it("renders fenced code blocks with language class + highlight.js", async () => {
     const src = "```ts\nconst x = 1;\n```\n";
     const result = await renderMarkdown(src);
     expect(result.html).toContain('class="language-ts"');
-    expect(result.html).toContain("const x = 1;");
+    // highlight.js wraps tokens in <span class="hljs-*">; the keyword + number survive.
+    expect(result.html).toContain("hljs-keyword");
+    expect(result.html).toContain("const");
+    expect(result.html).toContain("hljs-number");
   });
 
   it("extracts front matter and excludes it from html", async () => {

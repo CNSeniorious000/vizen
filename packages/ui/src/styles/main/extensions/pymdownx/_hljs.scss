@@ -1,0 +1,49 @@
+////
+/// highlight.js token mapping — vizen uses highlight.js (not Pygments) for code
+/// highlighting, but reuses zensical/ui's material code palette. hljs emits
+/// `.hljs-keyword` etc.; we map them to the same `--md-code-hl-*` variables the
+/// Pygments-style `.highlight` rules use, so the colors match the rest of the UI.
+////
+
+.md-typeset code.hljs {
+  // keyword: hljs-keyword, hljs-built_in, hljs-class, hljs-title
+  :is(.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-doctag, .hljs-name) {
+    color: var(--md-code-hl-keyword-color);
+  }
+  // built-in / type / class
+  :is(.hljs-type, .hljs-class .hljs-title, .hljs-title.class_, .hljs-built_in) {
+    color: var(--md-code-hl-constant-color);
+  }
+  // function
+  :is(.hljs-title.function_, .hljs-function .hljs-title) {
+    color: var(--md-code-hl-function-color);
+  }
+  // string
+  :is(.hljs-string, .hljs-regexp, .hljs-meta .hljs-string) {
+    color: var(--md-code-hl-string-color);
+  }
+  // number
+  :is(.hljs-number, .hljs-symbol, .hljs-bullet) {
+    color: var(--md-code-hl-number-color);
+  }
+  // comment
+  :is(.hljs-comment, .hljs-quote) {
+    color: var(--md-code-hl-comment-color);
+  }
+  // special (regex, escape)
+  :is(.hljs-regexp, .hljs-link, .hljs-selector-attr, .hljs-selector-pseudo) {
+    color: var(--md-code-hl-special-color);
+  }
+  // variable
+  :is(.hljs-variable, .hljs-template-variable, .hljs-attr, .hljs-attribute) {
+    color: var(--md-code-hl-variable-color);
+  }
+  // operator / punctuation
+  :is(.hljs-operator, .hljs-punctuation, .hljs-meta) {
+    color: var(--md-code-hl-operator-color);
+  }
+  // generic / default text
+  :is(.hljs, .hljs-subst) {
+    color: var(--md-code-fg-color);
+  }
+}

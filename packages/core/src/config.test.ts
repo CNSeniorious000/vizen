@@ -46,7 +46,7 @@ describe("config normalization", () => {
     expect(c.extra).toEqual({});
     expect(c.extra_css).toEqual([]);
     expect(c.extra_javascript).toEqual([]);
-    expect(c.markdown_extensions).toEqual([]);
+    expect(c.markdown_extensions).toEqual({});
   });
 
   it("preserves explicit values", () => {
