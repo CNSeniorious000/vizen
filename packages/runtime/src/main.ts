@@ -11,6 +11,8 @@
 import { mount } from "./mount.ts";
 import { h, Fragment, type VNode } from "preact";
 import { ISLAND_ATTR } from "./island.ts";
+import { mountSearch } from "./search.ts";
+import { mountClipboard } from "./clipboard.ts";
 
 const runtime = mount();
 
@@ -21,6 +23,7 @@ const ICONS: Record<string, string> = {
   "material/arrow-left": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>`,
   "material/arrow-right": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>`,
   "material/library": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>`,
+  "fontawesome/brands/git-alt": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.67-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>`,
 };
 
 // dangerouslySetInnerHTML lets us drop the raw SVG string into a vnode so the icon markup
@@ -41,10 +44,16 @@ function normalizeUrl(url: string): string {
 }
 
 runtime.hmr?.register("header", (props) => {
-  const p = props as { siteName?: string; pageTopic?: string; searchEnabled?: boolean };
+  const p = props as { siteName?: string; pageTopic?: string; searchEnabled?: boolean; repoUrl?: string; repoName?: string };
   const siteName = p.siteName ?? "";
   const pageTopic = p.pageTopic ?? "";
   const searchEnabled = !!p.searchEnabled;
+  const repoUrl = p.repoUrl ?? "";
+  const repoName = p.repoName ?? "";
+  const source = repoUrl ? h("div", { class: "md-header__source" },
+    h("a", { href: repoUrl, title: "Repository", class: "md-source", "data-md-component": "source" },
+      h("div", { class: "md-source__icon md-icon" }, icon("fontawesome/brands/git-alt")),
+      h("div", { class: "md-source__repository" }, repoName))) : h("div", { class: "md-header__source" });
   // Returns the INNER content of the <header data-md-component="header"> host.
   return h("nav", { class: "md-header__inner md-grid", "aria-label": "Header" },
     h("a", { href: "/", title: siteName, class: "md-header__button md-logo", "aria-label": siteName, "data-md-component": "logo" }, icon("material/library")),
@@ -54,7 +63,7 @@ runtime.hmr?.register("header", (props) => {
         h("div", { class: "md-header__topic" }, h("span", { class: "md-ellipsis" }, siteName)),
         h("div", { class: "md-header__topic", "data-md-component": "header-topic" }, h("span", { class: "md-ellipsis" }, pageTopic)))),
     searchEnabled ? h("label", { class: "md-header__button md-icon", for: "__search", "aria-label": "Search" }, icon("material/magnify")) : null,
-    h("div", { class: "md-header__source" }));
+    source);
 });
 
 // Content is NOT a hydratable island: its SSR markup (raw markdown HTML) lives directly
@@ -146,6 +155,15 @@ if (import.meta.hot) {
 // Mark the document as JS-enabled (mirrors zensical/ui's no-js → js class swap).
 document.documentElement.classList.remove("no-js");
 document.documentElement.classList.add("js");
+
+// Wire the search overlay (no-op if search is disabled — no .md-search__input in the DOM).
+mountSearch();
+
+// Inject code-copy buttons. Re-run when the content island swaps (client-side navigation)
+// so the new page's <pre> blocks get buttons too.
+mountClipboard();
+const contentEl = document.querySelector('[data-md-component="content"]');
+if (contentEl) new MutationObserver(() => mountClipboard()).observe(contentEl, { childList: true, subtree: true });
 
 // Re-export the island attr for consumers that want to query islands.
 export { ISLAND_ATTR };
