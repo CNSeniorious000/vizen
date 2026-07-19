@@ -28,11 +28,19 @@ export async function createDevServer(opts: ServerOptions): Promise<ViteDevServe
   const configPath = opts.configPath ?? await findConfig(opts.root);
   const config = await loadConfig(configPath);
   const docsDir = join(opts.root, config.docs_dir);
+  const port = opts.port ?? 5183;
+
+  // Create the http server FIRST so we can hand it to Vite's WebSocket. In middlewareMode
+  // Vite doesn't listen on its own and HMR is off by default; passing `server.ws.server`
+  // makes Vite's WebSocket share our http server (one port, no "Port undefined is already
+  // in use" — and the browser's HMR client connects to the same origin the page is served
+  // from). Vite 8.1 renamed `server.hmr` ws options to `server.ws`.
+  const http = createHttpServer();
 
   const vite = await createViteServer({
     root: opts.root,
     configFile: join(process.cwd(), "vite.config.ts"),
-    server: { middlewareMode: true },
+    server: { middlewareMode: true, ws: { server: http } },
     appType: "custom",
   } satisfies InlineConfig);
 
@@ -56,9 +64,7 @@ export async function createDevServer(opts: ServerOptions): Promise<ViteDevServe
     }
   });
 
-  // middlewareMode doesn't listen on its own — wrap Vite's middlewares in an http server.
-  const port = opts.port ?? 5183;
-  const http = createHttpServer(vite.middlewares);
+  http.on("request", vite.middlewares);
   await new Promise<void>((resolve) => http.listen(port, resolve));
   // Expose the http server so the CLI can report the bound port + close it.
   (vite as ViteDevServer & { httpServer: typeof http }).httpServer = http;
