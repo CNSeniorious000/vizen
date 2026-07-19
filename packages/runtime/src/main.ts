@@ -43,6 +43,12 @@ function normalizeUrl(url: string): string {
   return withSlash.startsWith("/") ? withSlash : `/${withSlash}`;
 }
 
+// The search overlay inner HTML — kept in sync with render/index.ts searchOverlay(). Lives
+// inside the header so the SCSS `:checked ~ .md-header .md-search__*` selectors match.
+// Defined before the header renderer registers so the renderer (which runs immediately on
+// register) can reference it without hitting the temporal dead zone.
+const SEARCH_OVERLAY_INNER = `<label class="md-search__overlay" for="__search"></label><div class="md-search__inner"><form class="md-search__form" onsubmit="return false"><label class="md-search__icon md-icon" for="__search" aria-label="Search">${ICONS["material/magnify"]}</label><input type="text" class="md-search__input" name="query" placeholder="Search" autocapitalize="off" autocorrect="off" spellcheck="false" /></form><div class="md-search__output"><div class="md-search__scrollwrap"><div class="md-search-result" data-md-component="search-result"></div></div></div></div>`;
+
 runtime.hmr?.register("header", (props) => {
   const p = props as { siteName?: string; pageTopic?: string; searchEnabled?: boolean; repoUrl?: string; repoName?: string };
   const siteName = p.siteName ?? "";
@@ -66,10 +72,6 @@ runtime.hmr?.register("header", (props) => {
     searchEnabled ? h("div", { class: "md-search", "data-md-component": "search", role: "dialog", "aria-label": "Search", dangerouslySetInnerHTML: { __html: SEARCH_OVERLAY_INNER } }) : null,
     source);
 });
-
-// The search overlay inner HTML — kept in sync with render/index.ts searchOverlay(). Lives
-// inside the header so the SCSS `:checked ~ .md-header .md-search__*` selectors match.
-const SEARCH_OVERLAY_INNER = `<label class="md-search__overlay" for="__search"></label><div class="md-search__inner"><form class="md-search__form" onsubmit="return false"><label class="md-search__icon md-icon" for="__search" aria-label="Search">${ICONS["material/magnify"]}</label><input type="text" class="md-search__input" name="query" placeholder="Search" autocapitalize="off" autocorrect="off" spellcheck="false" /></form><div class="md-search__output"><div class="md-search__scrollwrap"><div class="md-search-result" data-md-component="search-result"></div></div></div></div>`;
 
 // Content is NOT a hydratable island: its SSR markup (raw markdown HTML) lives directly
 // under <div data-md-component="content"><article>...</article></div>, and Preact can't
