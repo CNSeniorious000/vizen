@@ -9,8 +9,10 @@ let docsPromise: Promise<SearchDoc[]> | null = null;
 
 async function loadDocs(): Promise<SearchDoc[]> {
   if (!docsPromise) {
-    // Cache the promise so concurrent keystrokes share one fetch.
-    docsPromise = fetch("search.json").then((r) => r.ok ? r.json() as Promise<SearchDoc[]> : []).catch(() => []);
+    // Cache the promise so concurrent keystrokes share one fetch. Absolute path so it
+    // resolves from any page depth (a relative "search.json" on /getting-started/markdown/
+    // would 404).
+    docsPromise = fetch("/search.json").then((r) => r.ok ? r.json() as Promise<SearchDoc[]> : []).catch(() => []);
   }
   return docsPromise;
 }
