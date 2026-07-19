@@ -70,16 +70,24 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
     const url = resolve(href);
     if (!url || !isInternal(url)) return;
     if (cache.has(url.href)) return;
-    const p = fetchDoc(url).catch((err) => {
-      cache.delete(url.href);
-      const i = cacheOrder.indexOf(url.href);
-      if (i >= 0) cacheOrder.splice(i, 1);
-      throw err;
-    });
+    // Store a promise that NEVER rejects: a rejected promise in the cache would propagate
+    // when `go` later awaits `cache.get(...) ?? fetchDoc(...)`, and a fire-and-forget
+    // prefetch (hover/focus) that fails must not become an unhandled rejection. On failure
+    // we remove the cache entry and resolve to undefined; `go` will then re-fetch.
+    const p = fetchDoc(url).then(
+      (doc) => doc,
+      (err) => {
+        cache.delete(url.href);
+        const i = cacheOrder.indexOf(url.href);
+        if (i >= 0) cacheOrder.splice(i, 1);
+        return Promise.reject(err);
+      }
+    );
     cache.set(url.href, p);
     cacheOrder.push(url.href);
     evict();
-    await p;
+    // Swallow prefetch errors — hover/focus prefetch is best-effort; `go` re-fetches on miss.
+    await p.catch(() => {});
   }
 
   // --- core: fetch + diff + swap ------------------------------------------
@@ -93,9 +101,14 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
 
     const t0 = now();
     const fromCache = cache.has(url.href);
-    const doc = await (cache.get(url.href) ?? fetchDoc(url)).catch((e) => {
-      throw e;
+    // On fetch failure, fall back to a hard navigation rather than rejecting — `go` is
+    // often called fire-and-forget from the click handler, and a rejected promise there
+    // would surface as an unhandled rejection. Hard-nav is the correct degradation anyway.
+    const doc = await (cache.get(url.href) ?? fetchDoc(url)).catch(() => {
+      owner.location.href = href;
+      return null;
     });
+    if (!doc) return { url, swapped: [], fromCache, durationMs: now() - t0 };
 
     if (opts.beforeNavigate && !(await opts.beforeNavigate(url))) {
       return { url, swapped: [], fromCache, durationMs: now() - t0 };
