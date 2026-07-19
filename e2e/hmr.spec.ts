@@ -13,7 +13,9 @@ async function patchFooter(text: string) {
   const src = await readFile(MAIN_TS, "utf8");
   // Replace the footer renderer (between the START/END markers) with one that emits a
   // fixed marker in .md-footer-meta__inner, so we can assert the hot update took effect.
-  const replacement = `runtime.hmr?.register("footer", () => h("footer", { class: "md-footer" }, h("div", { class: "md-footer-meta md-typeset" }, h("div", { class: "md-footer-meta__inner md-grid" }, ${JSON.stringify(text)}))));`;
+  // The renderer returns the INNER content of the <footer data-md-component="footer"> host
+  // (a Fragment, not the host tag itself) so Preact's hydrate matches the host's children.
+  const replacement = `runtime.hmr?.register("footer", () => h(Fragment, null, h("div", { class: "md-footer-meta md-typeset" }, h("div", { class: "md-footer-meta__inner md-grid" }, ${JSON.stringify(text)}))));`;
   const next = src.replace(
     /\/\/ FOOTER-RENDERER-START[\s\S]*?\/\/ FOOTER-RENDERER-END/,
     `// FOOTER-RENDERER-START\n${replacement}\n// FOOTER-RENDERER-END`
@@ -24,8 +26,9 @@ async function patchFooter(text: string) {
 test.describe("HMR", () => {
   test("changing a renderer hot-updates only that island", async ({ page }: { page: Page }) => {
     await page.goto("/");
-    // Wait for the runtime to hydrate.
-    await expect(page.locator('[data-md-component="footer"] .md-footer-meta__inner')).toHaveText("Zensical Fixture");
+    // Wait for the runtime to hydrate. The SSR footer renders "Made with vizen" in the
+    // meta inner; hydration must not duplicate it.
+    await expect(page.locator('[data-md-component="footer"] .md-footer-meta__inner')).toContainText("Made with vizen");
 
     // Mark the header node so we can prove it survives the hot update (same element).
     await page.evaluate(() => {
