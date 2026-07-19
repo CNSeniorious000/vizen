@@ -34,9 +34,6 @@ function icon(name: string): VNode<any> {
   return h("span", { dangerouslySetInnerHTML: { __html: ICONS[name] ?? "" } });
 }
 
-interface NavNodeT { title: string; url?: string; children?: NavNodeT[]; active?: boolean }
-interface TocItemT { level: number; slug: string; text: string; children?: TocItemT[] }
-
 function normalizeUrl(url: string): string {
   if (url === "") return "/";
   if (url.startsWith("#") || /^https?:\/\//.test(url)) return url;
@@ -100,56 +97,9 @@ runtime.hmr?.register("footer", (props) => {
 });
 // FOOTER-RENDERER-END
 
-runtime.hmr?.register("nav", (props) => {
-  const p = props as { nav?: NavNodeT[]; siteName?: string };
-  const nav = p.nav ?? [];
-  const siteName = p.siteName ?? "";
-  const items = nav.map((n, i) => renderNavItem(n, `__nav_${i + 1}`, 1));
-  // Returns the INNER content of the <nav data-md-component="nav"> host.
-  return h(Fragment, null,
-    h("label", { class: "md-nav__title", for: "__drawer" },
-      h("a", { href: "/", title: siteName, class: "md-nav__button md-logo", "aria-label": siteName, "data-md-component": "logo" }, icon("material/library")),
-      siteName),
-    h("ul", { class: "md-nav__list", "data-md-scrollfix": true }, items));
-});
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function renderNavItem(n: NavNodeT, path: string, level: number): VNode<any> {
-  const activeCls = n.active ? " md-nav__item--active" : "";
-  if (n.children) {
-    const head = h("label", { class: "md-nav__link", for: path, id: `${path}_label`, tabindex: "0" },
-      h("span", { class: "md-ellipsis" }, n.title), h("span", { class: "md-nav__icon md-icon" }));
-    const children = n.children.map((c, i) => renderNavItem(c, `${path}_${i + 1}`, level + 1));
-    return h("li", { class: `md-nav__item md-nav__item--nested${activeCls}` },
-      h("input", { class: "md-nav__toggle md-toggle", type: "checkbox", id: path, checked: !!n.active }),
-      head,
-      h("nav", { class: "md-nav", "data-md-level": String(level), "aria-labelledby": `${path}_label`, "aria-expanded": n.active ? "true" : "false" },
-        h("label", { class: "md-nav__title", for: path }, h("span", { class: "md-nav__icon md-icon" }), n.title),
-        h("ul", { class: "md-nav__list", "data-md-scrollfix": true }, children)));
-  }
-  const linkCls = n.active ? "md-nav__link md-nav__link--active" : "md-nav__link";
-  return h("li", { class: `md-nav__item${activeCls}` },
-    h("a", { href: normalizeUrl(n.url ?? ""), class: linkCls }, h("span", { class: "md-ellipsis" }, n.title)));
-}
-
-runtime.hmr?.register("toc", (props) => {
-  const p = props as { toc?: TocItemT[] };
-  const toc = p.toc ?? [];
-  if (!toc.length) return null;
-  const items = toc.map(renderTocItem);
-  // Returns the INNER content of the <nav data-md-component="toc"> host.
-  return h(Fragment, null,
-    h("label", { class: "md-nav__title", for: "__toc" }, h("span", { class: "md-nav__icon md-icon" }), "On this page"),
-    h("ul", { class: "md-nav__list", "data-md-scrollfix": true }, items));
-});
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function renderTocItem(t: TocItemT): VNode<any> {
-  const children = t.children && t.children.length ? h("nav", { class: "md-nav", "aria-label": t.text }, h("ul", { class: "md-nav__list" }, t.children!.map(renderTocItem))) : null;
-  return h("li", { class: "md-nav__item" },
-    h("a", { href: `#${t.slug}`, class: "md-nav__link" }, h("span", { class: "md-ellipsis" }, h("span", { class: "md-typeset" }, t.text))),
-    children);
-}
+// Nav and toc are NOT hydratable islands — zensical/ui marks the wrapping .md-sidebar as
+// data-md-component="sidebar", and the nav/toc inside are static SSR markup. Client-side
+// navigation swaps the whole sidebar island; markdown/nav edits trigger a dev re-SSR.
 
 // HMR boundary: when this module (or a dependency) changes, Vite calls accept. We
 // re-mount every island so the new renderers take effect — but the DOM hosts are reused,

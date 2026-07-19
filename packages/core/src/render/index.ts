@@ -61,7 +61,7 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
     <div class="md-container" data-md-component="container">
       <main class="md-main" data-md-component="main">
         <div class="md-main__inner md-grid">
-          ${features.includes("navigation.hide") ? "" : `<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation"><div class="md-sidebar__scrollwrap"><div class="md-sidebar__inner">${island("nav", { nav: ctx.nav, siteName: config.site_name, features })}</div></div></div>`}
+          ${features.includes("navigation.hide") ? "" : `<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation"><div class="md-sidebar__scrollwrap"><div class="md-sidebar__inner">${renderNav(ctx.nav, config.site_name, features, ctx.toc)}</div></div></div>`}
           ${features.includes("toc.integrate") ? "" : tocSidebar(ctx.toc)}
           <div class="md-content" data-md-component="content">
             <article class="md-content__inner md-typeset">
@@ -89,7 +89,7 @@ export async function renderSite(_ctx: { config: Config }): Promise<Map<string, 
  *  runtime can find it; the renderer returns ONLY the inner content (no host tag), so
  *  Preact's hydrate matches the host's children rather than nesting a duplicate host. */
 const ISLAND_HOST_TAG: Record<string, string> = {
-  header: "header", tabs: "nav", footer: "footer", nav: "nav", toc: "nav",
+  header: "header", tabs: "nav", footer: "footer",
 };
 
 /** The host element's class — may depend on props (e.g. header shadow class varies with
@@ -106,8 +106,6 @@ function hostClass(name: string, props: unknown): string {
     }
     case "tabs": return "md-tabs";
     case "footer": return "md-footer";
-    case "nav": return ["md-nav", "md-nav--primary", features.includes("navigation.tabs") ? "md-nav--lifted" : ""].filter(Boolean).join(" ");
-    case "toc": return "md-nav md-nav--secondary";
     default: return "";
   }
 }
@@ -136,8 +134,6 @@ function renderIsland(name: string, props: unknown): string {
     case "header": return renderHeader(p);
     case "tabs": return renderTabs(p.nav as Nav);
     case "footer": return renderFooter(p);
-    case "nav": return renderNav(p.nav as Nav, p.siteName as string, (p.features as string[]) ?? []);
-    case "toc": return renderToc(p.toc as Toc);
     default: return "";
   }
 }
@@ -301,51 +297,64 @@ function renderFooter(p: Record<string, unknown>): string {
   <div class="md-footer-meta md-typeset"><div class="md-footer-meta__inner md-grid"><div class="md-copyright">Made with <a href="https://github.com/CNSeniorious000/vizen" target="_blank" rel="noopener">vizen</a></div></div></div>`;
 }
 
-/** Render the primary nav island's INNER content — mirrors zensical/ui src/partials/nav.html
- *  + nav-item.html. Nested sections use a checkbox toggle (md-nav__toggle) so they expand/
- *  collapse without JS; the active section is checked open. The <nav data-md-component="nav">
- *  host is added by island(). */
-function renderNav(nav: Nav, siteName: string, _features: string[]): string {
-  const items = nav.map((n, i) => renderNavItem(n, `__nav_${i + 1}`, 1)).join("");
-  return `<label class="md-nav__title" for="__drawer">
+/** Render the primary nav — mirrors zensical/ui src/partials/nav.html + nav-item.html.
+ *  This is NOT an island host (zensical marks the wrapping .md-sidebar as
+ *  data-md-component="sidebar", not the nav itself), so we emit the full <nav> tag with
+ *  aria-label + data-md-level="0". Nested sections use a checkbox toggle so they expand/
+ *  collapse without JS; the active section is checked open. The active leaf embeds the
+ *  page toc as a nested md-nav--secondary (nav-item.html's active branch). */
+function renderNav(nav: Nav, siteName: string, features: string[], toc: Toc): string {
+  const lifted = features.includes("navigation.tabs") ? " md-nav--lifted" : "";
+  const items = nav.map((n, i) => renderNavItem(n, `__nav_${i + 1}`, 1, features, toc)).join("");
+  return `<nav class="md-nav md-nav--primary${lifted}" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
     <a href="/" title="${esc(siteName)}" class="md-nav__button md-logo" aria-label="${esc(siteName)}" data-md-component="logo">${icon("material/library")}</a>
     ${esc(siteName)}
   </label>
-  <ul class="md-nav__list" data-md-scrollfix>${items}</ul>`;
+  <ul class="md-nav__list">${items}</ul>
+</nav>`;
 }
 
-function renderNavItem(n: NavNode, path: string, level: number): string {
+function renderNavItem(n: NavNode, path: string, level: number, features: string[], toc: Toc): string {
   const activeCls = n.active ? " md-nav__item--active" : "";
   // Section: has children → checkbox toggle + nested list (mirrors nav-item.html's
   // `nav_item.children` branch). Active sections render checked so they're expanded.
   if (n.children) {
     const checked = n.active ? " checked" : "";
     const head = `<label class="md-nav__link" for="${path}" id="${path}_label" tabindex="0"><span class="md-ellipsis">${esc(n.title)}</span><span class="md-nav__icon md-icon"></span></label>`;
-    const children = n.children.map((c, i) => renderNavItem(c, `${path}_${i + 1}`, level + 1)).join("");
-    return `<li class="md-nav__item md-nav__item--nested${activeCls}"><input class="md-nav__toggle md-toggle" type="checkbox" id="${path}"${checked} />${head}<nav class="md-nav" data-md-level="${level}" aria-labelledby="${path}_label" aria-expanded="${n.active ? "true" : "false"}"><label class="md-nav__title" for="${path}"><span class="md-nav__icon md-icon"></span>${esc(n.title)}</label><ul class="md-nav__list" data-md-scrollfix>${children}</ul></nav></li>`;
+    const children = n.children.map((c, i) => renderNavItem(c, `${path}_${i + 1}`, level + 1, features, toc)).join("");
+    return `<li class="md-nav__item md-nav__item--nested${activeCls}"><input class="md-nav__toggle md-toggle" type="checkbox" id="${path}"${checked} />${head}<nav class="md-nav" data-md-level="${level}" aria-labelledby="${path}_label" aria-expanded="${n.active ? "true" : "false"}"><label class="md-nav__title" for="${path}"><span class="md-nav__icon md-icon"></span>${esc(n.title)}</label><ul class="md-nav__list">${children}</ul></nav></li>`;
   }
-  // Active leaf: also render the inline toc toggle (mirrors nav-item.html's active branch).
-  if (n.active) {
-    return `<li class="md-nav__item${activeCls}"><a href="${esc(normalizeUrl(n.url ?? ""))}" class="md-nav__link md-nav__link--active"><span class="md-ellipsis">${esc(n.title)}</span></a></li>`;
+  // Active leaf: render the __toc toggle label + the link + the embedded page toc
+  // (mirrors nav-item.html's active branch — the toc lives inside the active nav item so
+  // it scrolls with the sidebar on mobile).
+  if (n.active && toc.length) {
+    const tocNav = renderToc(toc);
+    return `<li class="md-nav__item${activeCls}"><label class="md-nav__link md-nav__link--active" for="__toc"><span class="md-ellipsis">${esc(n.title)}</span><span class="md-nav__icon md-icon"></span></label><a href="${esc(normalizeUrl(n.url ?? ""))}" class="md-nav__link md-nav__link--active"><span class="md-ellipsis">${esc(n.title)}</span></a>${tocNav}</li>`;
   }
-  return `<li class="md-nav__item${activeCls}"><a href="${esc(normalizeUrl(n.url ?? ""))}" class="md-nav__link"><span class="md-ellipsis">${esc(n.title)}</span></a></li>`;
+  const linkCls = n.active ? "md-nav__link md-nav__link--active" : "md-nav__link";
+  return `<li class="md-nav__item${activeCls}"><a href="${esc(normalizeUrl(n.url ?? ""))}" class="${linkCls}"><span class="md-ellipsis">${esc(n.title)}</span></a></li>`;
 }
 
 /** The secondary sidebar (toc) wrapper — mirrors base.html's toc sidebar branch: a
- *  __toc checkbox + sidebar button, then the toc island inside. */
+ *  __toc checkbox + sidebar button, then the toc nav inside. */
 function tocSidebar(toc: Toc): string {
   const hasToc = toc.length > 0;
   const toggle = hasToc ? `<input class="md-nav__toggle md-toggle" type="checkbox" id="__toc" /><div class="md-sidebar-button__wrapper"><label class="md-sidebar-button" for="__toc"></label></div>` : "";
-  return `<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc"><div class="md-sidebar__scrollwrap">${toggle}<div class="md-sidebar__inner">${island("toc", { toc })}</div></div></div>`;
+  return `<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc"><div class="md-sidebar__scrollwrap">${toggle}<div class="md-sidebar__inner">${renderToc(toc, true)}</div></div></div>`;
 }
 
-/** Render the toc island's INNER content — mirrors zensical/ui src/partials/toc.html +
- *  toc-item.html. The <nav data-md-component="toc"> host is added by island(). */
-function renderToc(toc: Toc): string {
+/** Render the toc — mirrors zensical/ui src/partials/toc.html + toc-item.html. Emits the
+ *  full <nav class="md-nav md-nav--secondary"> tag. Used both in the secondary sidebar
+ *  (with data-md-component="toc") and embedded inside the active nav leaf (without it). */
+function renderToc(toc: Toc, withComponent = false): string {
   if (!toc.length) return "";
   const items = toc.map(renderTocItem).join("");
-  return `<label class="md-nav__title" for="__toc"><span class="md-nav__icon md-icon"></span>On this page</label>
-  <ul class="md-nav__list" data-md-scrollfix>${items}</ul>`;
+  const comp = withComponent ? ` data-md-component="toc"` : "";
+  return `<nav class="md-nav md-nav--secondary" aria-label="On this page"${comp}>
+  <label class="md-nav__title" for="__toc"><span class="md-nav__icon md-icon"></span>On this page</label>
+  <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>${items}</ul>
+</nav>`;
 }
 
 function renderTocItem(t: { slug: string; text: string; children?: unknown[] }): string {
