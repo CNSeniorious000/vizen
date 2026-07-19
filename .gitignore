@@ -8,5 +8,7 @@ coverage
 *.tsbuildinfo
 test-results/
 site/
+example/site-zensical/
+example/.cache/
 .vercel
 .env*
