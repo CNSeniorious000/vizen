@@ -57,7 +57,6 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
     <div data-md-component="announce"></div>
 
     ${island("header", { siteName: config.site_name, pageTopic: page.meta.title ?? page.title, features, searchEnabled: searchEnabled(config), repoUrl: config.repo_url, repoName: config.repo_name ?? config.site_name })}
-    ${searchEnabled(config) ? searchOverlay() : ""}
     ${features.includes("navigation.tabs") && !features.includes("navigation.tabs.sticky") ? island("tabs", { nav: ctx.nav }) : ""}
     <div class="md-container" data-md-component="container">
       <main class="md-main" data-md-component="main">
@@ -262,7 +261,7 @@ function renderHeader(p: Record<string, unknown>): string {
         <div class="md-header__topic" data-md-component="header-topic"><span class="md-ellipsis">${esc(pageTopic)}</span></div>
       </div>
     </div>
-    ${searchEnabled ? `<label class="md-header__button md-icon" for="__search" aria-label="Search">${icon("material/magnify")}</label>` : ""}
+    ${searchEnabled ? `<label class="md-header__button md-icon" for="__search" aria-label="Search">${icon("material/magnify")}</label>${searchOverlay()}` : ""}
     ${source}
   </nav>`;
 }

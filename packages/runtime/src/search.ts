@@ -63,13 +63,21 @@ function normalizeUrl(url: string): string {
   return withSlash.startsWith("/") ? withSlash : `/${withSlash}`;
 }
 
-/** Wire the search overlay: on input, load docs (once) + filter. The overlay is toggled
- *  by the __search checkbox (header magnify label); we only attach the input handler. */
+/** Wire the search overlay: on input, load docs (once) + filter. The overlay's visibility
+ *  is driven by the __search checkbox (the SCSS uses `:checked ~ .md-header`), so we check
+ *  it on focus and uncheck on blur — mirroring mkdocs-material's focus-toggles-overlay
+ *  behavior. Clicking the overlay backdrop (a label for __search) also unchecks it. */
 export function mountSearch(): void {
   const input = document.querySelector(".md-search__input") as HTMLInputElement | null;
   const result = document.querySelector('[data-md-component="search-result"]');
   if (!input || !result) return;
+  const toggle = document.getElementById("__search") as HTMLInputElement | null;
   let docs: SearchDoc[] | null = null;
+  input.addEventListener("focus", () => { if (toggle) toggle.checked = true; });
+  input.addEventListener("blur", () => {
+    // Delay so a click on a result link fires before we collapse the overlay.
+    setTimeout(() => { if (toggle) toggle.checked = false; }, 150);
+  });
   input.addEventListener("input", async () => {
     if (!docs) docs = await loadDocs();
     renderResults(result, input.value, docs);
