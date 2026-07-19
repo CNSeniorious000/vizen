@@ -15,10 +15,13 @@ export interface Config {
   site_dir?: string;
   theme: ThemeConfig;
   nav?: NavItem[];
+  repo_url?: string;
+  repo_name?: string;
+  copyright?: string;
   extra?: Record<string, unknown>;
   extra_css?: string[];
   extra_javascript?: string[];
-  markdown_extensions?: string[];
+  markdown_extensions?: Record<string, unknown>;
   plugins?: Record<string, unknown>;
 }
 
@@ -100,10 +103,13 @@ export function normalize(raw: Partial<Config>): Config {
     site_dir: raw.site_dir ?? "site",
     theme,
     nav: raw.nav,
+    repo_url: raw.repo_url,
+    repo_name: raw.repo_name,
+    copyright: raw.copyright,
     extra: raw.extra ?? {},
     extra_css: raw.extra_css ?? [],
     extra_javascript: raw.extra_javascript ?? [],
-    markdown_extensions: raw.markdown_extensions ?? [],
+    markdown_extensions: raw.markdown_extensions ?? {},
     plugins: raw.plugins ?? {},
   };
 }

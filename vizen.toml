@@ -2,14 +2,26 @@
 site_name = "vizen"
 site_description = "A modern static site generator with perfect HMR and client-side navigation — a TS port of zensical (Material for MkDocs) on Vite."
 site_url = "https://vizen.vercel.app"
+repo_url = "https://github.com/CNSeniorious000/vizen"
+repo_name = "CNSeniorious000/vizen"
 docs_dir = "docs"
 
 [theme]
 name = "material"
 variant = "modern"
 features = [
+  "search.highlight",
   "navigation.instant",
+  "navigation.instant.progress",
+  "navigation.instant.prefetch",
+  "navigation.path",
   "navigation.tabs",
+  "navigation.sections",
+  "navigation.footer",
+  "toc.follow",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.tooltips",
 ]
 
 [[nav]]
@@ -26,6 +38,10 @@ title = "Getting Started"
   [[nav.children]]
   title = "Configuration"
   url = "getting-started/configuration.md"
+
+  [[nav.children]]
+  title = "Markdown Syntax"
+  url = "getting-started/markdown.md"
 
 [[nav]]
 title = "Features"

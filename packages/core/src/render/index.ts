@@ -56,7 +56,8 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
     <div data-md-component="skip">${skipLink(ctx.toc)}</div>
     <div data-md-component="announce"></div>
 
-    ${island("header", { siteName: config.site_name, pageTopic: page.meta.title ?? page.title, features, searchEnabled: !!config.plugins?.search })}
+    ${island("header", { siteName: config.site_name, pageTopic: page.meta.title ?? page.title, features, searchEnabled: searchEnabled(config), repoUrl: config.repo_url, repoName: config.repo_name ?? config.site_name })}
+    ${searchEnabled(config) ? searchOverlay() : ""}
     ${features.includes("navigation.tabs") && !features.includes("navigation.tabs.sticky") ? island("tabs", { nav: ctx.nav }) : ""}
     <div class="md-container" data-md-component="container">
       <main class="md-main" data-md-component="main">
@@ -150,10 +151,39 @@ const ICONS: Record<string, string> = {
   "material/arrow-left": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>`,
   "material/arrow-right": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>`,
   "material/library": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>`,
+  "fontawesome/brands/git-alt": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.67-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>`,
 };
 
 function icon(name: string): string {
   return ICONS[name] ?? "";
+}
+
+/** Search is on by default (a docs site without search is broken UX). Opt out with
+ *  `plugins.search = false`. mkdocs-material treats search as a plugin; we keep the same
+ *  config knob but default to enabled. */
+function searchEnabled(config: Config): boolean {
+  const search = config.plugins?.search;
+  return search !== false;
+}
+
+/** The search overlay — mirrors mkdocs-material's search dialog. Toggled by the __search
+ *  checkbox (the header's magnify label). The runtime wires the input → fetch search.json
+ *  → filter → render results into [data-md-component="search-result"]. */
+function searchOverlay(): string {
+  return `<div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner">
+    <form class="md-search__form" onsubmit="return false">
+      <label class="md-search__icon md-icon" for="__search" aria-label="Search">${icon("material/magnify")}</label>
+      <input type="text" class="md-search__input" name="query" placeholder="Search" autocapitalize="off" autocorrect="off" spellcheck="false" />
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap">
+        <div class="md-search-result" data-md-component="search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>`;
 }
 
 /** Resolve the active palette (first if it's a list of toggleable palettes). */
@@ -220,6 +250,9 @@ function renderHeader(p: Record<string, unknown>): string {
   const siteName = String(p.siteName ?? "");
   const pageTopic = String(p.pageTopic ?? "");
   const searchEnabled = !!p.searchEnabled;
+  const repoUrl = String(p.repoUrl ?? "");
+  const repoName = String(p.repoName ?? "");
+  const source = repoUrl ? `<div class="md-header__source"><a href="${esc(repoUrl)}" title="Repository" class="md-source" data-md-component="source"><div class="md-source__icon md-icon">${icon("fontawesome/brands/git-alt")}</div><div class="md-source__repository">${esc(repoName)}</div></a></div>` : `<div class="md-header__source"></div>`;
   return `<nav class="md-header__inner md-grid" aria-label="Header">
     <a href="/" title="${esc(siteName)}" class="md-header__button md-logo" aria-label="${esc(siteName)}" data-md-component="logo">${icon("material/library")}</a>
     <label class="md-header__button md-icon" for="__drawer" aria-label="Menu">${icon("material/menu")}</label>
@@ -230,7 +263,7 @@ function renderHeader(p: Record<string, unknown>): string {
       </div>
     </div>
     ${searchEnabled ? `<label class="md-header__button md-icon" for="__search" aria-label="Search">${icon("material/magnify")}</label>` : ""}
-    <div class="md-header__source"></div>
+    ${source}
   </nav>`;
 }
 

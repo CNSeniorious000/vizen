@@ -120,13 +120,27 @@ export async function createBuildServer(opts: ServerOptions): Promise<void> {
   }
 
   // 3. Render every page to HTML.
+  const searchIndex: SearchDoc[] = [];
   for (const page of pages) {
     const ctx = await renderPageFromMd(config, docsDir, page.path, page.url, entryUrl);
     const html = await renderPage(ctx);
     const outPath = join(siteDir, page.url, "index.html");
     await mkdir(join(siteDir, page.url), { recursive: true });
     await writeFile(outPath, html);
+    // Collect a search doc: title + stripped text + location, for the client-side index.
+    searchIndex.push({ title: ctx.page.title, url: page.url, text: stripHtml(ctx.content.html) });
   }
+
+  // 4. Emit the search index (loaded lazily by the runtime when the user opens search).
+  await writeFile(join(siteDir, "search.json"), JSON.stringify(searchIndex));
+}
+
+interface SearchDoc { title: string; url: string; text: string }
+
+/** Strip HTML tags + collapse whitespace for the search index. Keeps the textual content
+ *  the user can actually search for, drops markup. */
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/&[a-z]+;|&#\d+;/gi, " ").replace(/\s+/g, " ").trim();
 }
 
 // --- helpers --------------------------------------------------------------
