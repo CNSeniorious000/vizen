@@ -8,3 +8,5 @@ coverage
 *.tsbuildinfo
 test-results/
 site/
+.vercel
+.env*

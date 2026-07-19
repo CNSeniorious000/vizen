@@ -1,9 +1,11 @@
-# Publish @vizen/* packages to npm on every PR via pkg.pr.new.
-# Each PR gets a temporary, installable version — no permanent npm publish needed.
-# Reviewers can `bun add https://pkg.pr.new/@vizen/core@<pr>` to try the change.
-name: Publish PR packages
+# Publish @vizen/* packages to npm on every commit/PR via pkg.pr.new.
+# Each commit gets a temporary, installable version — no permanent npm publish needed.
+# Install with: bun add https://pkg.pr.new/@vizen/core@<commit-sha>
+name: Publish packages
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
