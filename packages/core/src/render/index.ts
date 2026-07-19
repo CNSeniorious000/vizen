@@ -35,6 +35,7 @@ export async function renderPage(ctx: RenderContext): Promise<string> {
     ${page.meta.description ? `<meta name="description" content="${esc(page.meta.description)}" />` : ""}
     <title>${esc(title)} - ${esc(config.site_name)}</title>
     <link rel="stylesheet" href="/assets/stylesheets/main.css" />
+    <link rel="stylesheet" href="/assets/stylesheets/palette.css" />
     ${(config.extra_css ?? []).map((c) => `<link rel="stylesheet" href="${esc(c)}" />`).join("\n    ")}
   </head>
   <body data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">

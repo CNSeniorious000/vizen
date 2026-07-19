@@ -93,20 +93,23 @@ export async function createBuildServer(opts: ServerOptions): Promise<void> {
     alias: { react: "preact/compat", "react-dom": "preact/compat" },
   });
 
-  // 2. Compile the ported SCSS → site/assets/stylesheets/main.css
+  // 2. Compile the ported SCSS → site/assets/stylesheets/{main,palette}.css
   const { compileString: sassCompile } = await import("sass");
-  const scssFile = join(process.cwd(), "packages/ui/src/styles/main.scss");
-  const scssSrc = await readFile(scssFile, "utf8");
-  const css = sassCompile(scssSrc, {
+  const stylesDir = join(process.cwd(), "packages/ui/src/styles");
+  const sassOpts = {
     loadPaths: [
       join(process.cwd(), "node_modules/material-design-color"),
       join(process.cwd(), "node_modules/material-shadows"),
-      join(scssFile, ".."),
+      stylesDir,
     ],
     silenceDeprecations: ["legacy-js-api", "import", "global-builtin", "color-functions"],
     quietDeps: true,
-  }).css;
-  await writeFile(join(assetsDir, "stylesheets", "main.css"), css);
+  };
+  for (const name of ["main", "palette"]) {
+    const scssSrc = await readFile(join(stylesDir, `${name}.scss`), "utf8");
+    const css = sassCompile(scssSrc, sassOpts).css;
+    await writeFile(join(assetsDir, "stylesheets", `${name}.css`), css);
+  }
 
   // 3. Render every page to HTML.
   for (const page of pages) {
