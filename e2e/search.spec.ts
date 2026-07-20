@@ -44,4 +44,29 @@ test.describe("search modal", () => {
     await expect(input).toBeFocused();
     await expect(page.locator(".md-search__inner")).toBeVisible();
   });
+
+  test("closes the modal and navigates when a result is clicked", async ({ page }) => {
+    await page.goto("/");
+    await page.getByText("Search", { exact: true }).click();
+    const input = page.locator(".md-search__input");
+    await input.fill("installation");
+    await expect(page.locator(".md-search-result__link").first()).toBeVisible();
+
+    // Clicking a result must close the modal AND navigate to the target page.
+    await page.locator(".md-search-result__link").first().click();
+    await expect(page.locator("#__search")).not.toBeChecked();
+    await expect(page.locator(".md-search__inner")).toHaveCSS("pointer-events", "none");
+    await expect(page).toHaveURL(/\/getting-started\/installation\/$/);
+  });
+
+  test("Enter on the query input clicks the first result and closes the modal", async ({ page }) => {
+    await page.goto("/");
+    await page.keyboard.press("ControlOrMeta+K");
+    const input = page.locator(".md-search__input");
+    await input.fill("installation");
+    await expect(page.locator(".md-search-result__link").first()).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#__search")).not.toBeChecked();
+    await expect(page).toHaveURL(/\/getting-started\/installation\/$/);
+  });
 });

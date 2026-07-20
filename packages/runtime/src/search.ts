@@ -1,7 +1,17 @@
-// Client-side search. mkdocs-material ships a lunr-based web worker; vizen uses a lighter
-// approach: build emits search.json (one doc per page: title + url + text), and the
-// runtime loads it lazily on first search, then filters client-side. For a docs site's
-// size this is instant and avoids a worker + index dependency.
+// Client-side search, mirroring mkdocs-material's search component contract.
+//
+// mkdocs-material ships a lunr-based web worker; vizen uses a lighter approach: build
+// emits search.json (one doc per page: title + url + text), and the runtime loads it
+// lazily on first search, then filters client-side. For a docs site's size this is
+// instant and avoids a worker + index dependency.
+//
+// The interaction model follows upstream `components/search/_/index.ts`:
+//   - clicking any <a> inside the search dialog closes the dialog (the link's navigation
+//     is handled separately by client-side nav)
+//   - Enter on the query input clicks the first result
+//   - Escape / Tab closes the dialog
+//   - ArrowUp / ArrowDown moves focus through the results
+//   - Ctrl/⌘+K (and f / s / /) opens the dialog
 
 interface SearchDoc { title: string; url: string; text: string }
 
@@ -41,12 +51,12 @@ function renderResults(container: Element, query: string, docs: SearchDoc[]): vo
     return;
   }
   container.innerHTML = scored.map(({ d }) => {
-    // Snippet: first ~120 chars of text around the first term hit.
+    // Snippet: first ~160 chars of text around the first term hit.
     const lower = d.text.toLowerCase();
     const idx = terms.map((t) => lower.indexOf(t)).filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? 0;
     const start = Math.max(0, idx - 60);
     const snippet = (start > 0 ? "…" : "") + d.text.slice(start, start + 160).trim() + "…";
-    return `<a href="${normalizeUrl(d.url)}" class="md-search-result__link"><div class="md-search-result__title">${esc(d.title)}</div><div class="md-search-result__teardown">${esc(snippet)}</div></a>`;
+    return `<a href="${normalizeUrl(d.url)}" class="md-search-result__link" tabindex="-1"><div class="md-search-result__title">${esc(d.title)}</div><div class="md-search-result__teardown">${esc(snippet)}</div></a>`;
   }).join("");
 }
 
@@ -63,32 +73,67 @@ function normalizeUrl(url: string): string {
   return withSlash.startsWith("/") ? withSlash : `/${withSlash}`;
 }
 
+/** The focusable elements inside the search dialog, in tab order: the query input first,
+ *  then every result link. Used by ArrowUp/ArrowDown to cycle focus. */
+function focusable(input: HTMLInputElement, container: Element): HTMLElement[] {
+  return [input, ...Array.from(container.querySelectorAll<HTMLAnchorElement>(".md-search-result__link"))];
+}
+
 /** Wire the search modal: load and filter docs on input, focus it when opened, and expose
- *  the same Ctrl/⌘+K and Escape keyboard behavior advertised by the header button. */
+ *  the same Ctrl/⌘+K, Escape, Enter, and arrow-key behavior as mkdocs-material. */
 export function mountSearch(): void {
   const input = document.querySelector(".md-search__input") as HTMLInputElement | null;
   const toggle = document.getElementById("__search") as HTMLInputElement | null;
-  if (!input || !toggle) return;
+  const dialog = document.querySelector("[data-md-component=search]") as HTMLElement | null;
+  const result = document.querySelector('[data-md-component="search-result"]');
+  if (!input || !toggle || !dialog || !result) return;
   let docs: SearchDoc[] | null = null;
+
   const close = () => { toggle.checked = false; input.blur(); };
-  input.addEventListener("focus", () => { toggle.checked = true; });
+  const open = () => { toggle.checked = true; requestAnimationFrame(() => input.focus()); };
+
+  // Focus the input when the dialog is opened (via the header label or ⌘K).
   toggle.addEventListener("change", () => { if (toggle.checked) requestAnimationFrame(() => input.focus()); });
+  input.addEventListener("focus", () => { toggle.checked = true; });
+
+  // Filter on input.
   input.addEventListener("input", async () => {
     if (!docs) docs = await loadDocs();
-    const result = document.querySelector('[data-md-component="search-result"]');
-    if (result) renderResults(result, input.value, docs);
+    renderResults(result, input.value, docs);
   });
+
+  // Always close the dialog when a result link is clicked — mirrors upstream's
+  // `fromEvent(el, "click").pipe(filter(target closest "a")).subscribe(setToggle false)`.
+  // The link's navigation is handled by client-side nav (navigate/onLink); closing the
+  // dialog here means the modal is gone by the time the new page renders.
+  dialog.addEventListener("click", (e) => {
+    if ((e.target as Element | null)?.closest?.("a")) close();
+  });
+
+  // Keyboard: Enter → first result; Escape/Tab → close; ArrowUp/Down → cycle results.
   input.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
-    const first = document.querySelector<HTMLAnchorElement>('[data-md-component="search-result"] .md-search-result__link');
-    if (first) first.click();
-  });
-  // Escape (via the document handler, since focus keeps __search checked) closes; Ctrl/⌘+K opens.
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && toggle.checked) close();
-    if (e.key.toLowerCase() !== "k" || !(e.metaKey || e.ctrlKey)) return;
+    if (e.key === "Enter") {
+      const first = result.querySelector<HTMLAnchorElement>(".md-search-result__link");
+      if (first) first.click();
+      return;
+    }
+    if (e.key === "Escape" || e.key === "Tab") { close(); return; }
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
     e.preventDefault();
-    toggle.checked = true;
-    input.focus();
+    const els = focusable(input, result);
+    const active = document.activeElement as HTMLElement;
+    const i = els.indexOf(active);
+    const next = els[(i < 0 ? 0 : i + (e.key === "ArrowDown" ? 1 : els.length - 1)) % els.length];
+    next?.focus();
+  });
+
+  // Global shortcuts: Ctrl/⌘+K, or f / s / / (when not typing in another field) open search.
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && toggle.checked) { close(); return; }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); open(); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = (document.activeElement?.tagName ?? "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+    if (e.key === "f" || e.key === "s" || e.key === "/") { e.preventDefault(); open(); }
   });
 }
