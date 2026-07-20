@@ -50,6 +50,17 @@ export async function createDevServer(opts: ServerOptions): Promise<ViteDevServe
   vite.middlewares.use(async (req, res, next) => {
     const url = (req.url ?? "/").split("?")[0];
     if (url.startsWith("/@") || url.startsWith("/assets/") || url.startsWith("/node_modules/")) return next();
+    if (url === "/search.json") {
+      const pages = await collectPages(docsDir);
+      const searchIndex: SearchDoc[] = [];
+      for (const page of pages) {
+        const ctx = await renderPageFromMd(config, docsDir, page.path, page.url, "/@vizen/entry");
+        searchIndex.push({ title: ctx.page.title, url: page.url, text: stripHtml(ctx.content.html) });
+      }
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify(searchIndex));
+      return;
+    }
     const mdPath = urlToMdPath(url, docsDir);
     if (!mdPath) return next();
     try {

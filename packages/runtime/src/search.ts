@@ -63,29 +63,32 @@ function normalizeUrl(url: string): string {
   return withSlash.startsWith("/") ? withSlash : `/${withSlash}`;
 }
 
-/** Wire the search overlay: on input, load docs (once) + filter. The overlay's visibility
- *  is driven by the __search checkbox (the SCSS uses `:checked ~ .md-header`), so we check
- *  it on focus and uncheck on blur — mirroring mkdocs-material's focus-toggles-overlay
- *  behavior. Clicking the overlay backdrop (a label for __search) also unchecks it. */
+/** Wire the search modal: load and filter docs on input, focus it when opened, and expose
+ *  the same Ctrl/⌘+K and Escape keyboard behavior advertised by the header button. */
 export function mountSearch(): void {
   const input = document.querySelector(".md-search__input") as HTMLInputElement | null;
-  const result = document.querySelector('[data-md-component="search-result"]');
-  if (!input || !result) return;
   const toggle = document.getElementById("__search") as HTMLInputElement | null;
+  if (!input || !toggle) return;
   let docs: SearchDoc[] | null = null;
-  input.addEventListener("focus", () => { if (toggle) toggle.checked = true; });
-  input.addEventListener("blur", () => {
-    // Delay so a click on a result link fires before we collapse the overlay.
-    setTimeout(() => { if (toggle) toggle.checked = false; }, 150);
-  });
+  const close = () => { toggle.checked = false; input.blur(); };
+  input.addEventListener("focus", () => { toggle.checked = true; });
+  toggle.addEventListener("change", () => { if (toggle.checked) requestAnimationFrame(() => input.focus()); });
   input.addEventListener("input", async () => {
     if (!docs) docs = await loadDocs();
-    renderResults(result, input.value, docs);
+    const result = document.querySelector('[data-md-component="search-result"]');
+    if (result) renderResults(result, input.value, docs);
   });
-  // Enter → navigate to the first result.
   input.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
-    const first = result.querySelector<HTMLAnchorElement>(".md-search-result__link");
+    const first = document.querySelector<HTMLAnchorElement>('[data-md-component="search-result"] .md-search-result__link');
     if (first) first.click();
+  });
+  // Escape (via the document handler, since focus keeps __search checked) closes; Ctrl/⌘+K opens.
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && toggle.checked) close();
+    if (e.key.toLowerCase() !== "k" || !(e.metaKey || e.ctrlKey)) return;
+    e.preventDefault();
+    toggle.checked = true;
+    input.focus();
   });
 }
