@@ -8,6 +8,7 @@ import { join } from "node:path";
 // full page reload occurs.
 
 const MAIN_TS = join(process.cwd(), "packages/runtime/src/main.ts");
+let originalSource: string;
 
 async function patchFooter(text: string) {
   const src = await readFile(MAIN_TS, "utf8");
@@ -24,6 +25,10 @@ async function patchFooter(text: string) {
 }
 
 test.describe("HMR", () => {
+  test.beforeAll(async () => {
+    originalSource = await readFile(MAIN_TS, "utf8");
+  });
+
   test("changing a renderer hot-updates only that island", async ({ page }: { page: Page }) => {
     await page.goto("/");
     // Wait for the runtime to hydrate. The SSR footer renders "Made with vizen" in the
@@ -52,14 +57,9 @@ test.describe("HMR", () => {
     expect(jsMarker).toBe(1);
   });
 
-  // Restore the source after the suite so the working tree is clean. Using git restore is
-  // more robust than regex-matching the renderer back, since the renderer may span lines.
+  // Restore exactly what was on disk before the suite. The working copy may legitimately
+  // differ from HEAD, so `git checkout` would destroy unrelated uncommitted changes.
   test.afterAll(async () => {
-    const { execSync } = await import("node:child_process");
-    try {
-      execSync("git checkout -- packages/runtime/src/main.ts", { stdio: "ignore" });
-    } catch {
-      // Not in git or file unchanged — nothing to restore.
-    }
+    await writeFile(MAIN_TS, originalSource);
   });
 });

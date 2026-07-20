@@ -17,13 +17,14 @@ import { mountHeaderScroll } from "./header.ts";
 
 const runtime = mount();
 
-// Inline material SVG icons — same set as the SSR renderer, kept in sync.
+// Inline SVG icons — same set as the SSR renderer, kept in sync. Lucide (stroke) icons
+// match zensical's default theme icons; the SCSS .lucide override renders strokes.
 const ICONS: Record<string, string> = {
-  "material/menu": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>`,
-  "material/magnify": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.5 6.5 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2A4.5 4.5 0 0 0 5 9.5 4.5 4.5 0 0 0 9.5 14 4.5 4.5 0 0 0 14 9.5 4.5 4.5 0 0 0 9.5 5z"/></svg>`,
+  "material/menu": `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>`,
+  "material/magnify": `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>`,
   "material/arrow-left": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>`,
   "material/arrow-right": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>`,
-  "material/library": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>`,
+  "material/library": `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>`,
   "fontawesome/brands/git-alt": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.67-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>`,
 };
 
@@ -45,7 +46,7 @@ function normalizeUrl(url: string): string {
 // inside the header so the SCSS `:checked ~ .md-header .md-search__*` selectors match.
 // Defined before the header renderer registers so the renderer (which runs immediately on
 // register) can reference it without hitting the temporal dead zone.
-const SEARCH_OVERLAY_INNER = `<label class="md-search__overlay" for="__search"></label><div class="md-search__inner"><form class="md-search__form" onsubmit="return false"><label class="md-search__icon md-icon" for="__search" aria-label="Search">${ICONS["material/magnify"]}</label><input type="text" class="md-search__input" name="query" placeholder="Search" autocapitalize="off" autocorrect="off" spellcheck="false" /></form><div class="md-search__output"><div class="md-search__scrollwrap"><div class="md-search-result" data-md-component="search-result"></div></div></div></div>`;
+const SEARCH_OVERLAY_INNER = `<label class="md-search__button" for="__search">Search</label><label class="md-search__overlay" for="__search"></label><div class="md-search__inner"><form class="md-search__form" onsubmit="return false"><label class="md-search__icon md-icon" for="__search" aria-label="Search">${ICONS["material/magnify"]}</label><input type="text" class="md-search__input" name="query" placeholder="Search" autocapitalize="off" autocorrect="off" spellcheck="false" /></form><div class="md-search__output"><div class="md-search__scrollwrap"><div class="md-search-result" data-md-component="search-result"></div></div></div></div>`;
 
 runtime.hmr?.register("header", (props) => {
   const p = props as { siteName?: string; pageTopic?: string; searchEnabled?: boolean; repoUrl?: string; repoName?: string };

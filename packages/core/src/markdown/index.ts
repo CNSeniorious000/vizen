@@ -237,10 +237,30 @@ const SHIKI_ALIAS: Record<string, string> = {
   ts: "typescript", js: "javascript", py: "python", sh: "bash", shell: "bash",
   yml: "yaml", md: "markdown", text: "text", plaintext: "text",
 };
+// Custom shiki theme: every token color is a var(--md-code-hl-*) reference, so code
+// blocks pick up zensical's palette (and follow light/dark scheme switches) instead of
+// baking in a fixed theme's hex colors. Shiki passes color strings through verbatim.
+const VIZEN_THEME = {
+  name: "vizen",
+  fg: "var(--md-code-fg-color)",
+  bg: "transparent",
+  settings: [
+    { scope: ["keyword", "storage.type", "storage.modifier"], settings: { foreground: "var(--md-code-hl-keyword-color)" } },
+    { scope: ["string", "punctuation.definition.string"], settings: { foreground: "var(--md-code-hl-string-color)" } },
+    { scope: ["constant.numeric"], settings: { foreground: "var(--md-code-hl-number-color)" } },
+    { scope: ["constant.language", "constant.character", "variable.other.constant"], settings: { foreground: "var(--md-code-hl-constant-color)" } },
+    { scope: ["entity.name.function", "support.function", "meta.function-call entity.name"], settings: { foreground: "var(--md-code-hl-function-color)" } },
+    { scope: ["comment"], settings: { foreground: "var(--md-code-hl-comment-color)" } },
+    { scope: ["keyword.operator"], settings: { foreground: "var(--md-code-hl-operator-color)" } },
+    { scope: ["punctuation"], settings: { foreground: "var(--md-code-hl-punctuation-color)" } },
+    { scope: ["entity.name.tag", "entity.other.attribute-name"], settings: { foreground: "var(--md-code-hl-special-color)" } },
+    { scope: ["variable.other", "variable.parameter", "entity.name"], settings: { foreground: "var(--md-code-hl-name-color)" } },
+  ],
+};
 let highlighter: Highlighter | null = null;
 async function ensureHighlighter(): Promise<Highlighter> {
   if (!highlighter) {
-    highlighter = await getSingletonHighlighter({ langs: [...SHIKI_LANGS], themes: ["github-light"] });
+    highlighter = await getSingletonHighlighter({ langs: [...SHIKI_LANGS], themes: [VIZEN_THEME] });
   }
   return highlighter;
 }
@@ -254,7 +274,7 @@ md.use(markedHighlight({
     try {
       // codeToHtml emits <pre class="shiki"><code>...</code></pre>; marked-highlight wraps
       // the return value in <code>, so extract just the inner spans.
-      const html = highlighter.codeToHtml(code, { lang: language, theme: "github-light" });
+      const html = highlighter.codeToHtml(code, { lang: language, theme: "vizen" });
       const inner = html.match(/<code[^>]*>([\s\S]*)<\/code>/)?.[1] ?? code;
       return inner;
     } catch {
