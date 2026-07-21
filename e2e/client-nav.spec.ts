@@ -66,4 +66,18 @@ test.describe("client-side navigation", () => {
     // At least one request for the destination was made (prefetch).
     expect(requests.length).toBeGreaterThan(0);
   });
+
+  test("nav active state + toc update after navigation", async ({ page }) => {
+    await page.goto("/");
+    // Capture the home page's first toc entry — it must change after navigating.
+    const homeToc = await page.locator(".md-sidebar--secondary .md-nav__link").first().textContent();
+    expect(homeToc).toBeTruthy();
+
+    await page.click('a[href="getting-started/"]');
+    await expect(page).toHaveURL(/\/getting-started\/?$/);
+
+    // The secondary toc must reflect the destination page, not the origin — this is the
+    // regression guard for the sidebar being swapped as a unit on navigation.
+    await expect(page.locator(".md-sidebar--secondary .md-nav__link").first()).not.toContainText(homeToc ?? "");
+  });
 });

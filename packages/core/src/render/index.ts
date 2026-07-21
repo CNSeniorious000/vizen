@@ -377,17 +377,17 @@ function renderNavItem(n: NavNode, path: string, level: number, features: string
 function tocSidebar(toc: Toc): string {
   const hasToc = toc.length > 0;
   const toggle = hasToc ? `<input class="md-nav__toggle md-toggle" type="checkbox" id="__toc" /><div class="md-sidebar-button__wrapper"><label class="md-sidebar-button" for="__toc"></label></div>` : "";
-  return `<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc"><div class="md-sidebar__scrollwrap">${toggle}<div class="md-sidebar__inner">${renderToc(toc, true)}</div></div></div>`;
+  return `<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc"><div class="md-sidebar__scrollwrap">${toggle}<div class="md-sidebar__inner">${renderToc(toc)}</div></div></div>`;
 }
 
 /** Render the toc — mirrors zensical/ui src/partials/toc.html + toc-item.html. Emits the
- *  full <nav class="md-nav md-nav--secondary"> tag. Used both in the secondary sidebar
- *  (with data-md-component="toc") and embedded inside the active nav leaf (without it). */
-function renderToc(toc: Toc, withComponent = false): string {
+ *  full <nav class="md-nav md-nav--secondary"> tag. Only the <ul> carries
+ *  data-md-component="toc" (matching zensical); the <nav> wrapper does not, so it isn't
+ *  mistaken for a second toc island. */
+function renderToc(toc: Toc): string {
   if (!toc.length) return "";
   const items = toc.map(renderTocItem).join("");
-  const comp = withComponent ? ` data-md-component="toc"` : "";
-  return `<nav class="md-nav md-nav--secondary" aria-label="On this page"${comp}>
+  return `<nav class="md-nav md-nav--secondary" aria-label="On this page">
   <label class="md-nav__title" for="__toc"><span class="md-nav__icon md-icon"></span>On this page</label>
   <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>${items}</ul>
 </nav>`;

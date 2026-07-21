@@ -138,42 +138,55 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
     return { url, swapped, fromCache, durationMs: now() - t0 };
   }
 
-  /** The heart of incremental navigation: walk every LEAF island in the new doc (one that
-   *  contains no other island), and for each, replace the current host ONLY if its
-   *  serialized content differs. We skip container islands (those that wrap other islands)
-   *  because replacing a container would swap its children too, defeating the "only the
-   *  changed spot refreshes" guarantee — a changed content island must not take the footer
-   *  with it. */
+  /** The heart of incremental navigation. We diff islands at two granularities:
+   *
+   *  1. LEAF islands (no island descendant) — swapped individually when their serialized
+   *     content changes. This preserves DOM identity for islands like the header (only its
+   *     header-topic leaf swaps, the <header> host stays) and keeps a changed content
+   *     island from dragging the footer with it.
+   *
+   *  2. The sidebar CONTAINER islands — swapped as a whole when their content changes.
+   *     The nav's active-item class and the toc both live inside the sidebar but neither
+   *     is itself an island, so a leaf-only diff could never update them. Swapping the
+   *     whole sidebar is safe: the SSR markup has the active section's checkbox checked,
+   *     so the drawer re-opens to the right place. */
   function swapIslands(next: Document): string[] {
     const swapped: string[] = [];
     const current = owner;
     const nextIslands = Array.from(next.querySelectorAll(`[${ISLAND_ATTR}]`));
-    // Leaf islands only: no [data-md-component] descendant.
+
+    // --- leaf islands ------------------------------------------------------
     const nextLeaves = nextIslands.filter((h) => !h.querySelector(`[${ISLAND_ATTR}]`));
     for (const nextHost of nextLeaves) {
       const name = nextHost.getAttribute(ISLAND_ATTR)!;
       const curHosts = current.querySelectorAll(`[${ISLAND_ATTR}="${name}"]`);
-      // Match by island id (name + position) so the right host is swapped when there are
-      // multiple islands of the same name (e.g. two nav sidebars).
       const id = islandId(nextHost);
       const curHost = Array.from(curHosts).find((h) => islandId(h) === id);
       if (!curHost) {
-        // New island that didn't exist before — append it next to its nearest present sibling.
         insertNewIsland(nextHost, name);
         swapped.push(name);
         continue;
       }
-      if (serialize(curHost) === serialize(nextHost)) continue; // unchanged — leave it alone
+      if (serialize(curHost) === serialize(nextHost)) continue;
       const cloned = nextHost.cloneNode(true) as Element;
       curHost.replaceWith(cloned);
-      // Scripts inserted via cloneNode/replaceWith do NOT execute. Re-create each <script>
-      // so the browser runs it — mkdocs-material relies on this for inline page scripts.
       reexecuteScripts(cloned);
       swapped.push(name);
     }
 
-    // Remove leaf islands present in current but absent in next (e.g. a sidebar hidden on
-    // the destination page). Only leaves — containers are left for their leaves to manage.
+    // --- sidebar containers (swap as a unit so nav active + toc update) ----
+    const nextSidebars = nextIslands.filter((h) => h.getAttribute(ISLAND_ATTR) === "sidebar" && !h.parentElement?.closest(`[${ISLAND_ATTR}]`));
+    for (const nextHost of nextSidebars) {
+      const curHost = Array.from(current.querySelectorAll(`[${ISLAND_ATTR}="sidebar"]`)).find((h) => islandId(h) === islandId(nextHost));
+      if (!curHost) continue;
+      if (serialize(curHost) === serialize(nextHost)) continue;
+      const cloned = nextHost.cloneNode(true) as Element;
+      curHost.replaceWith(cloned);
+      reexecuteScripts(cloned);
+      swapped.push("sidebar");
+    }
+
+    // Remove leaf islands present in current but absent in next.
     const nextLeafIds = new Set(nextLeaves.map((h) => `${h.getAttribute(ISLAND_ATTR)}::${islandId(h)}`));
     current.querySelectorAll(`[${ISLAND_ATTR}]`).forEach((curHost) => {
       if (curHost.querySelector(`[${ISLAND_ATTR}]`)) return; // skip containers

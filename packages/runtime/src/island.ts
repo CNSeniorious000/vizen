@@ -14,16 +14,18 @@ export function islandOf(el: Element | null): string | null {
 }
 
 /** A stable per-island id combining the component name + its position index, used as a
- *  hydration/HMR key so Preact reconciles by identity rather than re-creating nodes. */
+ *  hydration/HMR key so Preact reconciles by identity rather than re-creating nodes.
+ *
+ *  The index is the island's position among ALL islands with the same name in the
+ *  document (not just among siblings) — two `toc` islands live in different parents
+ *  (the secondary sidebar vs. the active nav leaf) but must still get distinct ids, or
+ *  client-nav's leaf diff would match the wrong one and never swap the secondary toc. */
 export function islandId(host: Element): string {
   const name = host.getAttribute(ISLAND_ATTR) ?? "unknown";
   const explicit = host.getAttribute(ISLAND_ID_ATTR);
   if (explicit) return `${name}::${explicit}`;
-  // Position among siblings with the same component name — stable across navigations as
-  // long as the page layout is stable, which it is for a docs site.
-  const parent = host.parentElement;
-  if (!parent) return name;
-  const siblings = Array.from(parent.querySelectorAll(`:scope > [${ISLAND_ATTR}="${name}"]`));
-  const idx = siblings.indexOf(host);
+  const root = host.ownerDocument;
+  const all = Array.from(root.querySelectorAll(`[${ISLAND_ATTR}="${name}"]`));
+  const idx = all.indexOf(host);
   return idx >= 0 ? `${name}#${idx}` : name;
 }
