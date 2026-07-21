@@ -175,9 +175,12 @@ export function createNavigator(opts: NavigationOptions = {}): Navigator {
     }
 
     // --- sidebar containers (swap as a unit so nav active + toc update) ----
-    const nextSidebars = nextIslands.filter((h) => h.getAttribute(ISLAND_ATTR) === "sidebar" && !h.parentElement?.closest(`[${ISLAND_ATTR}]`));
+    // Sidebars live inside <main data-md-component="main">, so they're never "top-level";
+    // match them by data-md-type (navigation / toc) instead of islandId position.
+    const nextSidebars = nextIslands.filter((h) => h.getAttribute(ISLAND_ATTR) === "sidebar");
     for (const nextHost of nextSidebars) {
-      const curHost = Array.from(current.querySelectorAll(`[${ISLAND_ATTR}="sidebar"]`)).find((h) => islandId(h) === islandId(nextHost));
+      const type = nextHost.getAttribute("data-md-type");
+      const curHost = Array.from(current.querySelectorAll(`[${ISLAND_ATTR}="sidebar"][data-md-type="${type}"]`))[0];
       if (!curHost) continue;
       if (serialize(curHost) === serialize(nextHost)) continue;
       const cloned = nextHost.cloneNode(true) as Element;
